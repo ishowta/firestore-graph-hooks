@@ -38,10 +38,9 @@ type GraphQuery<T extends DocData> =
     } &
       {
         // we need negated type https://github.com/microsoft/TypeScript/pull/29317#issuecomment-452973876
-        [K in `_${string}`]?: [
-          DocRef<DocData> | ColRef<DocData>,
-          Record<string, unknown>
-        ]
+        [K in string]?:
+          | [DocRef<DocData> | ColRef<DocData>, Record<string, unknown>]
+          | Record<string, unknown>
       })
   | ((data: T) => GraphQuery<T>)
 
@@ -63,17 +62,14 @@ type JoinedDataInner<T extends DocData, Q extends GraphQuery<T>> = ({
     : T[K]
 } &
   {
-    [K in keyof GraphQueryQueryType<T, Q> as K extends `_${infer KS}`
-      ? KS
-      : never]: K extends `_${string}`
-      ? GraphQueryQueryType<T, Q>[K] extends [infer Ref, infer UQuery]
+    [K in keyof GraphQueryQueryType<T, Q>]: K extends keyof T ? unknown
+      : GraphQueryQueryType<T, Q>[K] extends [infer Ref, infer UQuery]
         ? Ref extends DocRef<DocData> | ColRef<DocData>
           ? Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
             ? JoinedData<Ref, Required<UQuery>>
             : never
           : never
         : never
-      : never
   })[]
 
 type RefToDoc<R extends DocRef<DocData> | ColRef<DocData>> = R extends
@@ -118,9 +114,9 @@ const [folders] = _useJoinedCollection(ref, (roomRef) => ({
   ref: {
     belonged_organization_ref: {},
   },
-  _room: extraField(RoomModel.getRoomRef(roomRef.ref.id), {
+  room: extraField(RoomModel.getPasswordRef(roomRef.ref.id), {
     belonged_organization_ref: {},
   }),
 }))
 
-folders[0]
+folders[0].ref[0].
