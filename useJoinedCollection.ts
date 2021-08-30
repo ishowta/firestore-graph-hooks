@@ -50,7 +50,7 @@ type GraphQueryQueryType<T, Q extends GraphQuery<T>> = Q extends (
   ? ReturnType<Q>
   : Q
 
-type JoinedDataInner<T extends DocData, Q extends GraphQuery<T>> = ({
+type JoinedDataInner<T extends DocData, Q extends GraphQuery<T>> = {
   [K in keyof T]: K extends keyof GraphQueryQueryType<T, Q>
     ? RefToDoc<T[K]> extends DocData
       ? Required<GraphQueryQueryType<T, Q>[K]> extends GraphQuery<
@@ -62,15 +62,16 @@ type JoinedDataInner<T extends DocData, Q extends GraphQuery<T>> = ({
     : T[K]
 } &
   {
-    [K in keyof GraphQueryQueryType<T, Q>]: K extends keyof T ? unknown
+    [K in keyof GraphQueryQueryType<T, Q>]: K extends keyof T
+      ? unknown
       : GraphQueryQueryType<T, Q>[K] extends [infer Ref, infer UQuery]
-        ? Ref extends DocRef<DocData> | ColRef<DocData>
-          ? Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
-            ? JoinedData<Ref, Required<UQuery>>
-            : never
+      ? Ref extends DocRef<DocData> | ColRef<DocData>
+        ? Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
+          ? JoinedData<Ref, Required<UQuery>>
           : never
         : never
-  })[]
+      : never
+  }
 
 type RefToDoc<R extends DocRef<DocData> | ColRef<DocData>> = R extends
   | DocRef<infer D>
@@ -109,7 +110,7 @@ declare function extraField<
   >
 >(ref: Ref, query: Q): [Ref, Q]
 
-let ref: DocRef<RoomRef> = {} as any
+let ref: ColRef<RoomRef> = {} as any
 const [folders] = _useJoinedCollection(ref, (roomRef) => ({
   ref: {
     belonged_organization_ref: {},
@@ -119,4 +120,4 @@ const [folders] = _useJoinedCollection(ref, (roomRef) => ({
   }),
 }))
 
-folders[0].ref[0].
+folders[0].ref.name
