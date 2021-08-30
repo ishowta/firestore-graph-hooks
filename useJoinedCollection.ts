@@ -91,7 +91,7 @@ type JoinedData<
     : never
   : never
 
-declare function _useJoinedCollection<
+declare function _useJoinedQuery<
   Ref extends DocRef<DocData> | ColRef<DocData>,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [JoinedData<Ref, Q>, boolean, Error]
@@ -104,7 +104,7 @@ declare function extraField<
 >(ref: Ref, query: Q): [Ref, Q]
 
 let ref: ColRef<RoomRef> = {} as any
-const [folders] = _useJoinedCollection(ref, (roomRef) => ({
+const [folders] = _useJoinedQuery(ref, (roomRef) => ({
   ref: {
     belonged_organization_ref: {},
   },
@@ -112,5 +112,3 @@ const [folders] = _useJoinedCollection(ref, (roomRef) => ({
     belonged_organization_ref: {},
   }),
 }))
-
-folders[0].__id__
