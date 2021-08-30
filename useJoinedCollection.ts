@@ -1,4 +1,9 @@
-import { ColRef, DocRef } from 'src/shared/api/firebase'
+import {
+  ColRef,
+  DocRef,
+  QuerySnapshot,
+  Snapshot,
+} from 'src/shared/api/firebase'
 import { RoomRef } from '../schema'
 import { RoomModel } from './room'
 
@@ -57,6 +62,10 @@ type JoinedDataInner<T extends DocData, Q extends GraphQuery<T>> = {
           : never
         : never
       : never
+  } & {
+    __snapshot__: Snapshot<T>
+    __ref__: DocRef<T>
+    __id__: string
   }
 
 type RefToDoc<R extends DocRef<DocData> | ColRef<DocData>> = R extends
@@ -76,7 +85,9 @@ type JoinedData<
     : never
   : R extends ColRef<infer U>
   ? Q extends GraphQuery<U>
-    ? JoinedDataInner<U, Q>[]
+    ? JoinedDataInner<U, Q>[] & {
+        __snapshot__: QuerySnapshot<U>
+      }
     : never
   : never
 
@@ -102,4 +113,4 @@ const [folders] = _useJoinedCollection(ref, (roomRef) => ({
   }),
 }))
 
-folders[0].ref.name
+folders[0].__id__
