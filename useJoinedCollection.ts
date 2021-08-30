@@ -1,15 +1,6 @@
 import { ColRef, DocRef } from 'src/shared/api/firebase'
-import {
-  Attendee,
-  Folder,
-  Room,
-  RoomRef,
-  RoomStatus,
-  UserBelongedOrganization,
-} from '../schema'
+import { RoomRef } from '../schema'
 import { RoomModel } from './room'
-
-type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never
 
 type DocData = { [field: string]: any }
 
@@ -21,11 +12,6 @@ type FilterRefKeys<T extends DocData> = {
     : never
 }[keyof T & string]
 
-/*
-any extends T[K]
-    ? any
-    :
-*/
 type GraphQuery<T extends DocData> =
   | ({
       [K in FilterRefKeys<T>]?: T[K] extends
@@ -98,10 +84,6 @@ declare function _useJoinedCollection<
   Ref extends DocRef<DocData> | ColRef<DocData>,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [JoinedData<Ref, Q>, boolean, Error]
-
-type Schema = {
-  attendee: Attendee
-}
 
 declare function extraField<
   Ref extends DocRef<DocData> | ColRef<DocData>,
