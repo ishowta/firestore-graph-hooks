@@ -16,3 +16,5 @@ export function assertType<_T extends true>() {}
 export function assertNotType<_T extends false>() {}
 
 export type RequiredPrimitive<T> = T extends infer U | undefined ? U : T;
+
+export type Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;

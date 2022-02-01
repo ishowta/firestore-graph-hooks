@@ -6,6 +6,7 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import { PickOptional, SelectiveOptional } from "./helper";
+import { Expand } from "./tests/helper";
 
 /**
  * FirestoreのID
@@ -134,11 +135,11 @@ type JoinedData<
   Q extends GraphQuery<RefToDoc<R>>
 > = R extends DocumentReference<infer U>
   ? Q extends GraphQuery<U>
-    ? JoinedDataInner<U, Q>
+    ? Expand<JoinedDataInner<U, Q>>
     : never
   : R extends CollectionReference<infer U>
   ? Q extends GraphQuery<U>
-    ? JoinedDataInner<U, Q>[] & CollectionMetadata<U>
+    ? Expand<JoinedDataInner<U, Q>>[] & CollectionMetadata<U>
     : never
   : never;
 
