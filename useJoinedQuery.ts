@@ -157,8 +157,11 @@ export declare function _useJoinedQuery<
   Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [JoinedData<Ref, Q>, boolean, Error];
+export declare function _useJoinedQuery<Q extends GraphQuery<{}>>(
+  query: Q
+): [Expand<JoinedDataInner<{}, Q>>, boolean, Error];
 
-export declare function extraField<
+export declare function field<
   Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [Ref, Q];

@@ -2,7 +2,7 @@ import { DocumentReference, Timestamp } from "firebase/firestore";
 import {
   CollectionMetadata,
   DocumentMetadata,
-  extraField,
+  field,
   _useJoinedQuery,
 } from "../useJoinedQuery";
 import { assertType, Equal } from "./helper";
@@ -10,6 +10,7 @@ import {
   getKanbans,
   getProjects,
   getTodoLists,
+  getUsers,
   Kanban,
   Project,
   TODO,
@@ -20,17 +21,22 @@ import {
 let [projects] = _useJoinedQuery(getProjects(), (project) => ({
   ownerRef: (_user) => ({
     nowPlayingRef: (todo) => ({
-      extraOnlyTestField: extraField(todo.__ref__, {}),
+      extraOnlyTestField: field(todo.__ref__, {}),
     }),
   }),
   currentRef: (kanban) => ({
     nextRef: {},
-    todoLists: extraField(getTodoLists(kanban.__ref__), {}),
+    todoLists: field(getTodoLists(kanban.__ref__), {}),
   }),
-  kanbans: extraField(getKanbans(project.__ref__), {
+  kanbans: field(getKanbans(project.__ref__), {
     nextRef: {},
   }),
 }));
+
+let [query2] = _useJoinedQuery({
+  users: field(getUsers(), {}),
+  projects: field(getProjects(), {}),
+});
 
 type ManuelaProject = typeof projects[number];
 type ManuelaOwner = ManuelaProject["owner"];
