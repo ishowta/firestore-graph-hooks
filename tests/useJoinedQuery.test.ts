@@ -3,7 +3,9 @@ import {
   CollectionMetadata,
   DocumentMetadata,
   field,
-  _useJoinedQuery,
+  useJoinedQuery,
+  WithCollectionMetadata,
+  WithMetadata,
 } from "../useJoinedQuery";
 import { assertType, Equal } from "./helper";
 import {
@@ -18,7 +20,7 @@ import {
   User,
 } from "./schema";
 
-let [projects] = _useJoinedQuery(getProjects(), (project) => ({
+let [projects] = useJoinedQuery(getProjects(), (project) => ({
   ownerRef: (_user) => ({
     nowPlayingRef: (todo) => ({
       extraOnlyTestField: field(todo.__ref__, {}),
@@ -33,7 +35,7 @@ let [projects] = _useJoinedQuery(getProjects(), (project) => ({
   }),
 }));
 
-let [query2] = _useJoinedQuery({
+let [query2] = useJoinedQuery({
   users: field(getUsers(), {}),
   projects: field(getProjects(), {}),
 });
@@ -65,7 +67,21 @@ type ExpectProjectsType = CollectionMetadata<Project> &
           })[];
     })[];
 
+type ExpectQuery2Type = {
+  users: WithCollectionMetadata<User>;
+  projects: WithCollectionMetadata<Project>;
+};
+
 assertType<Equal<typeof projects, ExpectProjectsType>>();
+assertType<Equal<typeof query2, ExpectQuery2Type>>();
+assertType<
+  Equal<
+    ManuelaKanban,
+    WithMetadata<Kanban> & {
+      next: WithMetadata<Kanban> | null;
+    }
+  >
+>();
 let expected: ExpectProjectsType = {} as any;
 projects = expected;
 expected = projects;

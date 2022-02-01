@@ -153,11 +153,11 @@ type JoinedData<
     : never
   : never;
 
-export declare function _useJoinedQuery<
+export declare function useJoinedQuery<
   Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [JoinedData<Ref, Q>, boolean, Error];
-export declare function _useJoinedQuery<Q extends GraphQuery<{}>>(
+export declare function useJoinedQuery<Q extends GraphQuery<{}>>(
   query: Q
 ): [Expand<JoinedDataInner<{}, Q>>, boolean, Error];
 
@@ -165,5 +165,3 @@ export declare function field<
   Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [Ref, Q];
-
-// TODO: フラグメント（部分的なジェネリクスが必要？）
