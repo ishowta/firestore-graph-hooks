@@ -1,0 +1,11 @@
+{
+  "name": "firestore-join-hooks",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:ishowta/firestore-join-hooks.git",
+  "author": "ishowta <ishowta@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "firebase": "^9.6.5"
+  }
+}

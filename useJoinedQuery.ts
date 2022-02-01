@@ -1,114 +1,124 @@
 import {
-  ColRef,
-  DocRef,
+  CollectionReference,
+  DocumentReference,
   QuerySnapshot,
-  Snapshot,
-} from 'src/shared/api/firebase'
-import { RoomRef } from '../schema'
-import { RoomModel } from './room'
+  DocumentSnapshot,
+  DocumentData,
+} from "firebase/firestore";
 
-type DocData = { [field: string]: any }
+type ID = string & {};
 
-type FilterRefKeys<T extends DocData> = {
+type Data<T extends DocumentData> = T & {
+  __snapshot__: DocumentSnapshot<T>;
+  __ref__: DocumentReference<T>;
+  __id__: string;
+};
+
+type FilterRefKeys<T extends DocumentData> = {
   [K in keyof T & string]: T[K] extends
-    | (DocRef<DocData> | ColRef<DocData>)
+    | (DocumentReference<DocumentData> | CollectionReference<DocumentData>)
     | undefined
     ? K
-    : never
-}[keyof T & string]
+    : never;
+}[keyof T & string];
 
-type GraphQuery<T extends DocData> =
+type GraphQuery<T extends DocumentData> =
   | ({
       [K in FilterRefKeys<T>]?: T[K] extends
-        | (DocRef<infer U> | ColRef<infer U>)
+        | (DocumentReference<infer U> | CollectionReference<infer U>)
         | undefined
-        ? U extends DocData
+        ? U extends DocumentData
           ? GraphQuery<U>
           : never
-        : never
-    } &
-      {
-        // we need negated type https://github.com/microsoft/TypeScript/pull/29317#issuecomment-452973876
-        [K in string]?:
-          | [DocRef<DocData> | ColRef<DocData>, Record<string, unknown>]
-          | Record<string, unknown>
-      })
-  | ((data: T) => GraphQuery<T>)
+        : never;
+    } & {
+      // we need negated type https://github.com/microsoft/TypeScript/pull/29317#issuecomment-452973876
+      [K in string]?:
+        | [
+            DocumentReference<DocumentData> | CollectionReference<DocumentData>,
+            Record<string, unknown>
+          ]
+        | Record<string, unknown>;
+    })
+  | ((data: Data<T>) => GraphQuery<T>);
 
 type GraphQueryQueryType<T, Q extends GraphQuery<T>> = Q extends (
   ...args: any
 ) => any
   ? ReturnType<Q>
-  : Q
+  : Q;
 
-type JoinedDataInner<T extends DocData, Q extends GraphQuery<T>> = {
-  [K in keyof T]: K extends keyof GraphQueryQueryType<T, Q>
-    ? RefToDoc<T[K]> extends DocData
+type JoinedDataInner<T extends DocumentData, Q extends GraphQuery<T>> = {
+  [K in keyof T as K extends `${infer OriginalK}Ref`
+    ? OriginalK
+    : K]: K extends keyof GraphQueryQueryType<T, Q>
+    ? RefToDoc<T[K]> extends DocumentData
       ? Required<GraphQueryQueryType<T, Q>[K]> extends GraphQuery<
           RefToDoc<T[K]>
         >
         ? JoinedData<T[K], Required<GraphQueryQueryType<T, Q>[K]>>
         : never
       : never
-    : T[K]
-} &
-  {
-    [K in keyof GraphQueryQueryType<T, Q>]: K extends keyof T
-      ? unknown
-      : GraphQueryQueryType<T, Q>[K] extends [infer Ref, infer UQuery]
-      ? Ref extends DocRef<DocData> | ColRef<DocData>
-        ? Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
-          ? JoinedData<Ref, Required<UQuery>>
-          : never
+    : T[K];
+} & {
+  [K in keyof GraphQueryQueryType<T, Q> as K extends `${infer OriginalK}Ref`
+    ? OriginalK
+    : K]: K extends keyof T
+    ? unknown
+    : GraphQueryQueryType<T, Q>[K] extends [infer Ref, infer UQuery]
+    ? Ref extends
+        | DocumentReference<DocumentData>
+        | CollectionReference<DocumentData>
+      ? Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
+        ? JoinedData<Ref, Required<UQuery>>
         : never
       : never
-  } & {
-    __snapshot__: Snapshot<T>
-    __ref__: DocRef<T>
-    __id__: string
-  }
+    : never;
+} & {
+  __snapshot__: DocumentSnapshot<T>;
+  __ref__: DocumentReference<T>;
+  __id__: string;
+};
 
-type RefToDoc<R extends DocRef<DocData> | ColRef<DocData>> = R extends
-  | DocRef<infer D>
-  | undefined
+type RefToDoc<
+  R extends DocumentReference<DocumentData> | CollectionReference<DocumentData>
+> = R extends DocumentReference<infer D> | undefined
   ? D
-  : R extends ColRef<infer D> | undefined
+  : R extends CollectionReference<infer D> | undefined
   ? D
-  : never
+  : never;
 
 type JoinedData<
-  R extends DocRef<DocData> | ColRef<DocData>,
+  R extends DocumentReference<DocumentData> | CollectionReference<DocumentData>,
   Q extends GraphQuery<RefToDoc<R>>
-> = R extends DocRef<infer U>
+> = R extends DocumentReference<infer U>
   ? Q extends GraphQuery<U>
     ? JoinedDataInner<U, Q>
     : never
-  : R extends ColRef<infer U>
+  : R extends CollectionReference<infer U>
   ? Q extends GraphQuery<U>
     ? JoinedDataInner<U, Q>[] & {
-        __snapshot__: QuerySnapshot<U>
+        __snapshot__: QuerySnapshot<U>;
       }
     : never
-  : never
+  : never;
 
-declare function _useJoinedQuery<
-  Ref extends DocRef<DocData> | ColRef<DocData>,
+export declare function _useJoinedQuery<
+  Ref extends
+    | DocumentReference<DocumentData>
+    | CollectionReference<DocumentData>,
   Q extends GraphQuery<RefToDoc<Ref>>
->(ref: Ref, query: Q): [JoinedData<Ref, Q>, boolean, Error]
+>(ref: Ref, query: Q): [JoinedData<Ref, Q>, boolean, Error];
 
-declare function extraField<
-  Ref extends DocRef<DocData> | ColRef<DocData>,
+export declare function extraField<
+  Ref extends
+    | DocumentReference<DocumentData>
+    | CollectionReference<DocumentData>,
   Q extends GraphQuery<
-    Ref extends DocRef<infer U> ? U : Ref extends ColRef<infer U> ? U : never
+    Ref extends DocumentReference<infer U>
+      ? U
+      : Ref extends CollectionReference<infer U>
+      ? U
+      : never
   >
->(ref: Ref, query: Q): [Ref, Q]
-
-let ref: ColRef<RoomRef> = {} as any
-const [folders] = _useJoinedQuery(ref, (roomRef) => ({
-  ref: {
-    belonged_organization_ref: {},
-  },
-  room: extraField(RoomModel.getPasswordRef(roomRef.ref.id), {
-    belonged_organization_ref: {},
-  }),
-}))
+>(ref: Ref, query: Q): [Ref, Q];
