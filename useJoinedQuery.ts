@@ -52,6 +52,7 @@ type PickRefField<T extends DocumentData> = {
  * TODO: 否定形や存在型が無いのでextra fieldを`unknown`にしてしまっているが他に方法は無い？
  */
 type GraphQuery<T extends DocumentData> =
+  // ref fieldを含んだクエリ（extra fieldも入れられる）
   | ({
       [K in PickRefField<T>]?: NonNullable<T[K]> extends
         | DocumentReference<infer U>
@@ -63,7 +64,9 @@ type GraphQuery<T extends DocumentData> =
     } & {
       [K in Exclude<keyof T, PickRefField<T>>]?: never;
     })
+  // extra fieldのみのクエリ
   | ({ [K in keyof T]?: never } & { [K in string]: unknown })
+  // ドキュメントを引数にとってクエリを返す関数
   | ((data: Data<T>) => GraphQuery<T>);
 
 type GraphQueryQueryType<T, Q extends GraphQuery<T>> = Q extends (
@@ -71,6 +74,8 @@ type GraphQueryQueryType<T, Q extends GraphQuery<T>> = Q extends (
 ) => any
   ? ReturnType<Q>
   : Q;
+
+type RequiredGraphQuery<Q> = Q extends (...args: any) => any ? Q : Required<Q>;
 
 type JoinedDataInner<
   T extends DocumentData,
@@ -89,11 +94,11 @@ type JoinedDataInner<
       keyof GraphQueryQueryType<T, Q> as K extends `${infer OriginalK}Ref`
       ? OriginalK
       : K]: RefToDoc<NonNullable<T[K]>> extends DocumentData
-      ? Required<GraphQueryQueryType<T, Q>[K]> extends GraphQuery<
+      ? RequiredGraphQuery<GraphQueryQueryType<T, Q>[K]> extends GraphQuery<
           RefToDoc<NonNullable<T[K]>>
         >
         ?
-            | JoinedData<T[K], Required<GraphQueryQueryType<T, Q>[K]>>
+            | JoinedData<T[K], RequiredGraphQuery<GraphQueryQueryType<T, Q>[K]>>
             | (null extends T[K] ? null : never)
         : never
       : never;

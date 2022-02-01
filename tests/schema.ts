@@ -19,6 +19,8 @@ export type User = {
   name: string;
   nowPlayingRef: DocumentReference<TODO>;
 };
+export const getUsers = () =>
+  collection(firestore, "userse") as CollectionReference<User>;
 
 /**
  * プロジェクト

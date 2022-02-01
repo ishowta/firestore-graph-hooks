@@ -9,9 +9,11 @@ import { assertType, Equal } from "./helper";
 import { getKanbans, getProjects, Kanban, Project, TODO, User } from "./schema";
 
 const [projects] = _useJoinedQuery(getProjects(), (project) => ({
-  ownerRef: {
-    nowPlayingRef: {},
-  },
+  ownerRef: (_user) => ({
+    nowPlayingRef: (todo) => ({
+      extraOnlyTestField: extraField(todo.__ref__, {}),
+    }),
+  }),
   currentRef: {
     next: {},
   },
@@ -25,7 +27,10 @@ type ExpectProjectsType = CollectionMetadata<Project> &
     owner: DocumentMetadata<User> & {
       createdAt: Timestamp;
       name: string;
-      nowPlaying: DocumentMetadata<TODO> & TODO;
+      nowPlaying: DocumentMetadata<TODO> &
+        TODO & {
+          extraOnlyTestField: DocumentMetadata<TODO> & TODO;
+        };
     };
     createdAt: Timestamp;
     current: DocumentMetadata<Kanban> & {
@@ -45,3 +50,10 @@ type ExpectProjectsType = CollectionMetadata<Project> &
   })[];
 
 assertType<Equal<typeof projects, ExpectProjectsType>>();
+
+// assertType<
+//   Equal<
+//     Pick<typeof projects extends (infer T)[] ? T : never, "owner">,
+//     Pick<ExpectProjectsType extends (infer T)[] ? T : never, "owner">
+//   >
+// >();
