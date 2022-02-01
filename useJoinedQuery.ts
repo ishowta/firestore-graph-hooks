@@ -48,6 +48,8 @@ type PickRefField<T extends DocumentData> = {
 
 /**
  * クエリの型
+ *
+ * TODO: 否定形や存在型が無いのでextra fieldを`unknown`にしてしまっているが他に方法は無い？
  */
 type GraphQuery<T extends DocumentData> =
   | ({
@@ -61,6 +63,7 @@ type GraphQuery<T extends DocumentData> =
     } & {
       [K in Exclude<keyof T, PickRefField<T>>]?: never;
     })
+  | ({ [K in keyof T]?: never } & { [K in string]: unknown })
   | ((data: Data<T>) => GraphQuery<T>);
 
 type GraphQueryQueryType<T, Q extends GraphQuery<T>> = Q extends (
