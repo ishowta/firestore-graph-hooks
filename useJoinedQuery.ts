@@ -31,10 +31,10 @@ export type CollectionMetadata<T> = {
   __snapshot__: QuerySnapshot<T>;
 };
 
-/**
- * Queryを書くときに参照する計算途中の中間データ
- */
-export type Data<T extends DocumentData> = T & DocumentMetadata<T>;
+export type WithMetadata<T extends DocumentData> = T & DocumentMetadata<T>;
+
+export type WithCollectionMetadata<T extends DocumentData> = WithMetadata<T>[] &
+  CollectionMetadata<T>;
 
 type AnyReference =
   | DocumentReference<DocumentData>
@@ -74,7 +74,7 @@ type GraphQuery<T extends DocumentData> =
   // extra fieldのみのクエリ
   | ({ [K in keyof T]?: never } & { [K in string]: unknown })
   // ドキュメントを引数にとってクエリを返す関数
-  | ((data: Data<T>) => GraphQuery<T>);
+  | ((data: WithMetadata<T>) => GraphQuery<T>);
 
 type GraphQueryQueryType<T, Q extends GraphQuery<T>> = Q extends (
   ...args: any
@@ -140,16 +140,18 @@ type JoinedData<
   Q extends GraphQuery<RefToDoc<R>>
 > = R extends DocumentReference<infer U>
   ? Q extends GraphQuery<U>
-    ? // append U for readable type
-      U & Expand<Omit<JoinedDataInner<U, Q>, keyof U>> & DocumentMetadata<U>
+    ? {} extends Omit<JoinedDataInner<U, Q>, keyof U>
+      ? WithMetadata<U>
+      : U & Expand<Omit<JoinedDataInner<U, Q>, keyof U>> & DocumentMetadata<U>
     : never
   : R extends CollectionReference<infer U>
   ? Q extends GraphQuery<U>
-    ? // append U for readable type
-      (U &
-        Expand<Omit<JoinedDataInner<U, Q>, keyof U>> &
-        DocumentMetadata<U>)[] &
-        CollectionMetadata<U>
+    ? {} extends Omit<JoinedDataInner<U, Q>, keyof U>
+      ? WithCollectionMetadata<U>
+      : (U &
+          Expand<Omit<JoinedDataInner<U, Q>, keyof U>> &
+          DocumentMetadata<U>)[] &
+          CollectionMetadata<U>
     : never
   : never;
 
@@ -162,3 +164,5 @@ export declare function extraField<
   Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [Ref, Q];
+
+// TODO: フラグメント（部分的なジェネリクスが必要？）

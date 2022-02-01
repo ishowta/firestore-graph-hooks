@@ -6,7 +6,16 @@ import {
   _useJoinedQuery,
 } from "../useJoinedQuery";
 import { assertType, Equal } from "./helper";
-import { getKanbans, getProjects, Kanban, Project, TODO, User } from "./schema";
+import {
+  getKanbans,
+  getProjects,
+  getTodoLists,
+  Kanban,
+  Project,
+  TODO,
+  TODOList,
+  User,
+} from "./schema";
 
 let [projects] = _useJoinedQuery(getProjects(), (project) => ({
   ownerRef: (_user) => ({
@@ -14,13 +23,18 @@ let [projects] = _useJoinedQuery(getProjects(), (project) => ({
       extraOnlyTestField: extraField(todo.__ref__, {}),
     }),
   }),
-  currentRef: {
+  currentRef: (kanban) => ({
     nextRef: {},
-  },
+    todoLists: extraField(getTodoLists(kanban.__ref__), {}),
+  }),
   kanbans: extraField(getKanbans(project.__ref__), {
     nextRef: {},
   }),
 }));
+
+type ManuelaProject = typeof projects[number];
+type ManuelaOwner = ManuelaProject["owner"];
+type ManuelaKanban = ManuelaProject["kanbans"][number];
 
 type ExpectProjectsType = CollectionMetadata<Project> &
   (DocumentMetadata<Project> &
@@ -35,6 +49,8 @@ type ExpectProjectsType = CollectionMetadata<Project> &
       current: DocumentMetadata<Kanban> &
         Kanban & {
           next: (DocumentMetadata<Kanban> & Kanban) | null;
+          todoLists: (DocumentMetadata<TODOList> & TODOList)[] &
+            CollectionMetadata<TODOList>;
         };
       kanbans: CollectionMetadata<Kanban> &
         (DocumentMetadata<Kanban> &
