@@ -42,14 +42,14 @@ type AnyReference =
 /**
  * ドキュメントのフィールドからリファレンスのフィールドのみを取り出す
  */
-export type PickRefField<T extends DocumentData> = {
+type PickRefField<T extends DocumentData> = {
   [K in keyof T]: NonNullable<T[K]> extends AnyReference ? K : never;
 }[keyof T];
 
 /**
  * クエリの型
  */
-export type GraphQuery<T extends DocumentData> =
+type GraphQuery<T extends DocumentData> =
   | ({
       [K in PickRefField<T>]?: NonNullable<T[K]> extends
         | DocumentReference<infer U>

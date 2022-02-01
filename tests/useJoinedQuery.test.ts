@@ -1,22 +1,12 @@
-import {
-  DocumentReference,
-  DocumentSnapshot,
-  Timestamp,
-} from "firebase/firestore";
+import { DocumentReference, Timestamp } from "firebase/firestore";
 import {
   CollectionMetadata,
-  Data,
   DocumentMetadata,
   extraField,
-  GraphQuery,
-  ID,
-  PickRefField,
   _useJoinedQuery,
 } from "../useJoinedQuery";
 import { assertType, Equal } from "./helper";
 import { getKanbans, getProjects, Kanban, Project, TODO, User } from "./schema";
-
-type T2 = Exclude<keyof User, PickRefField<User>>;
 
 const [projects] = _useJoinedQuery(getProjects(), (project) => ({
   ownerRef: {
@@ -55,13 +45,3 @@ type ExpectProjectsType = CollectionMetadata<Project> &
   })[];
 
 assertType<Equal<typeof projects, ExpectProjectsType>>();
-
-assertType<
-  Equal<
-    Pick<typeof projects extends (infer T)[] ? T : never, "kanbans">,
-    Pick<ExpectProjectsType extends (infer T)[] ? T : never, "kanbans">
-  >
->();
-projects[0].current.next;
-
-type A = GraphQuery<Project & { hogeRef: string }>;
