@@ -31,10 +31,10 @@ export type CollectionMetadata<T> = {
   __snapshot__: QuerySnapshot<T>;
 };
 
-export type WithMetadata<T extends DocumentData> = T & DocumentMetadata<T>;
+export type WithMetadata<T extends DocumentData> = DocumentMetadata<T> & T;
 
-export type WithCollectionMetadata<T extends DocumentData> = WithMetadata<T>[] &
-  CollectionMetadata<T>;
+export type WithCollectionMetadata<T extends DocumentData> =
+  CollectionMetadata<T> & WithMetadata<T>[];
 
 type AnyReference =
   | DocumentReference<DocumentData>
@@ -142,15 +142,13 @@ type JoinedData<
   ? Q extends GraphQuery<U>
     ? {} extends Omit<JoinedDataInner<U, Q>, keyof U>
       ? WithMetadata<U>
-      : U & Expand<Omit<JoinedDataInner<U, Q>, keyof U>> & DocumentMetadata<U>
+      : WithMetadata<U> & Expand<Omit<JoinedDataInner<U, Q>, keyof U>>
     : never
   : R extends CollectionReference<infer U>
   ? Q extends GraphQuery<U>
     ? {} extends Omit<JoinedDataInner<U, Q>, keyof U>
       ? WithCollectionMetadata<U>
-      : (U &
-          Expand<Omit<JoinedDataInner<U, Q>, keyof U>> &
-          DocumentMetadata<U>)[] &
+      : (WithMetadata<U> & Expand<Omit<JoinedDataInner<U, Q>, keyof U>>)[] &
           CollectionMetadata<U>
     : never
   : never;
