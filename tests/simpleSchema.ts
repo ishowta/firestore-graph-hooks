@@ -5,10 +5,10 @@ import {
   DocumentReference,
   Timestamp,
 } from "@firebase/firestore";
-import { ID } from "../useJoinedQuery";
 import { firestore } from "./firebase";
 
-export type Second = number & {};
+// 妥協
+export type Second = number;
 
 /**
  * ユーザー
@@ -106,7 +106,7 @@ export const getTodos = (todoListRef: DocumentReference<TODOList>) =>
 
 /**
  * TODOオーダー
- * /projects/{projectID}/kanbans/{kanbanID}/todoLists/{todoListID}/metadata/todoOrder
+ * /projects/{projectID}/kanbans/{kanbanID}/metadata/todoListOrder
  */
 export type TODOOrder = {
   order: ID[];

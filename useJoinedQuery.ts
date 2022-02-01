@@ -5,26 +5,50 @@ import {
   DocumentSnapshot,
   DocumentData,
 } from "firebase/firestore";
+import { RequiredPrimitive } from "./tests/helper";
 
-type ID = string & {};
+/**
+ * FirestoreのID
+ */
+export type ID = string & {};
 
-type Data<T extends DocumentData> = T & {
+/**
+ * 得られるDocumentに付属するメタデータ
+ *
+ * TODO: DocumentSnapshotの`data()`を呼んで展開してしまうので平らにしても問題ないはず
+ */
+export type DocumentMetadata<T> = {
   __snapshot__: DocumentSnapshot<T>;
   __ref__: DocumentReference<T>;
-  __id__: string;
+  __id__: ID;
 };
 
-type FilterRefKeys<T extends DocumentData> = {
-  [K in keyof T & string]: T[K] extends
-    | (DocumentReference<DocumentData> | CollectionReference<DocumentData>)
-    | undefined
+/**
+ * 得られるCollectionに付属するメタデータ
+ */
+export type CollectionMetadata<T> = {
+  __snapshot__: QuerySnapshot<T>;
+};
+
+/**
+ * Queryを書くときに参照する計算途中の中間データ
+ */
+export type Data<T extends DocumentData> = T & DocumentMetadata<T>;
+
+/**
+ * ドキュメントのフィールドからリファレンスのフィールドのみを取り出す
+ */
+type PickRefField<T extends DocumentData> = {
+  [K in keyof T & string]: RequiredPrimitive<T[K]> extends
+    | DocumentReference<DocumentData>
+    | CollectionReference<DocumentData>
     ? K
     : never;
 }[keyof T & string];
 
 type GraphQuery<T extends DocumentData> =
   | ({
-      [K in FilterRefKeys<T>]?: T[K] extends
+      [K in PickRefField<T>]?: T[K] extends
         | (DocumentReference<infer U> | CollectionReference<infer U>)
         | undefined
         ? U extends DocumentData
@@ -74,11 +98,7 @@ type JoinedDataInner<T extends DocumentData, Q extends GraphQuery<T>> = {
         : never
       : never
     : never;
-} & {
-  __snapshot__: DocumentSnapshot<T>;
-  __ref__: DocumentReference<T>;
-  __id__: string;
-};
+} & DocumentMetadata<T>;
 
 type RefToDoc<
   R extends DocumentReference<DocumentData> | CollectionReference<DocumentData>
@@ -97,9 +117,7 @@ type JoinedData<
     : never
   : R extends CollectionReference<infer U>
   ? Q extends GraphQuery<U>
-    ? JoinedDataInner<U, Q>[] & {
-        __snapshot__: QuerySnapshot<U>;
-      }
+    ? JoinedDataInner<U, Q>[] & CollectionMetadata<U>
     : never
   : never;
 
