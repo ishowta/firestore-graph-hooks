@@ -5,6 +5,7 @@ import {
   DocumentSnapshot,
   DocumentData,
 } from "firebase/firestore";
+import { PickOptional, SelectiveOptional } from "./helper";
 import { RequiredPrimitive } from "./tests/helper";
 
 /**
@@ -35,17 +36,20 @@ export type CollectionMetadata<T> = {
  */
 export type Data<T extends DocumentData> = T & DocumentMetadata<T>;
 
+type AnyReference =
+  | DocumentReference<DocumentData>
+  | CollectionReference<DocumentData>;
+
 /**
  * ドキュメントのフィールドからリファレンスのフィールドのみを取り出す
  */
 type PickRefField<T extends DocumentData> = {
-  [K in keyof T & string]: RequiredPrimitive<T[K]> extends
-    | DocumentReference<DocumentData>
-    | CollectionReference<DocumentData>
-    ? K
-    : never;
-}[keyof T & string];
+  [K in keyof T]: RequiredPrimitive<T[K]> extends AnyReference ? K : never;
+}[keyof T];
 
+/**
+ * クエリの型
+ */
 type GraphQuery<T extends DocumentData> =
   | ({
       [K in PickRefField<T>]?: T[K] extends
@@ -57,11 +61,10 @@ type GraphQuery<T extends DocumentData> =
         : never;
     } & {
       // we need negated type https://github.com/microsoft/TypeScript/pull/29317#issuecomment-452973876
+      // [K in not PickRefField<T>]?: ...
       [K in string]?:
-        | [
-            DocumentReference<DocumentData> | CollectionReference<DocumentData>,
-            Record<string, unknown>
-          ]
+        | [AnyReference, Record<string, unknown>]
+        // rerフィールドの場合でもこちらと混ぜる必要があるためこれが必要
         | Record<string, unknown>;
     })
   | ((data: Data<T>) => GraphQuery<T>);
@@ -72,44 +75,60 @@ type GraphQueryQueryType<T, Q extends GraphQuery<T>> = Q extends (
   ? ReturnType<Q>
   : Q;
 
-type JoinedDataInner<T extends DocumentData, Q extends GraphQuery<T>> = {
-  [K in keyof T as K extends `${infer OriginalK}Ref`
-    ? OriginalK
-    : K]: K extends keyof GraphQueryQueryType<T, Q>
-    ? RefToDoc<T[K]> extends DocumentData
+type JoinedDataInner<
+  T extends DocumentData,
+  Q extends GraphQuery<T>
+> = SelectiveOptional<
+  {
+    /**
+     * ドキュメントのもともとのフィールド
+     */
+    [K in Exclude<keyof T, keyof GraphQueryQueryType<T, Q>>]: T[K];
+  } & {
+    /**
+     * クエリで指定されたリファレンスフィールド
+     */
+    [K in keyof T &
+      keyof GraphQueryQueryType<T, Q> as K extends `${infer OriginalK}Ref`
+      ? OriginalK
+      : K]: RefToDoc<NonNullable<T[K]>> extends DocumentData
       ? Required<GraphQueryQueryType<T, Q>[K]> extends GraphQuery<
-          RefToDoc<T[K]>
+          RefToDoc<NonNullable<T[K]>>
         >
-        ? JoinedData<T[K], Required<GraphQueryQueryType<T, Q>[K]>>
+        ?
+            | JoinedData<T[K], Required<GraphQueryQueryType<T, Q>[K]>>
+            | (null extends T[K] ? null : never)
         : never
-      : never
-    : T[K];
-} & {
-  [K in keyof GraphQueryQueryType<T, Q> as K extends `${infer OriginalK}Ref`
-    ? OriginalK
-    : K]: K extends keyof T
-    ? unknown
-    : GraphQueryQueryType<T, Q>[K] extends [infer Ref, infer UQuery]
-    ? Ref extends
-        | DocumentReference<DocumentData>
-        | CollectionReference<DocumentData>
-      ? Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
-        ? JoinedData<Ref, Required<UQuery>>
+      : never;
+  } & {
+    /**
+     * クエリで追加されたエクストラフィールド
+     */
+    [K in Exclude<
+      keyof GraphQueryQueryType<T, Q>,
+      keyof T
+    >]: GraphQueryQueryType<T, Q>[K] extends [infer Ref, infer UQuery]
+      ? Ref extends AnyReference
+        ? Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
+          ? JoinedData<Ref, Required<UQuery>>
+          : never
         : never
-      : never
-    : never;
-} & DocumentMetadata<T>;
+      : never;
+  },
+  keyof PickOptional<T> | keyof PickOptional<GraphQueryQueryType<T, Q>>
+> &
+  DocumentMetadata<T>;
 
-type RefToDoc<
-  R extends DocumentReference<DocumentData> | CollectionReference<DocumentData>
-> = R extends DocumentReference<infer D> | undefined
+type RefToDoc<R extends AnyReference> = R extends
+  | DocumentReference<infer D>
+  | undefined
   ? D
   : R extends CollectionReference<infer D> | undefined
   ? D
   : never;
 
 type JoinedData<
-  R extends DocumentReference<DocumentData> | CollectionReference<DocumentData>,
+  R extends AnyReference,
   Q extends GraphQuery<RefToDoc<R>>
 > = R extends DocumentReference<infer U>
   ? Q extends GraphQuery<U>
@@ -122,21 +141,11 @@ type JoinedData<
   : never;
 
 export declare function _useJoinedQuery<
-  Ref extends
-    | DocumentReference<DocumentData>
-    | CollectionReference<DocumentData>,
+  Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [JoinedData<Ref, Q>, boolean, Error];
 
 export declare function extraField<
-  Ref extends
-    | DocumentReference<DocumentData>
-    | CollectionReference<DocumentData>,
-  Q extends GraphQuery<
-    Ref extends DocumentReference<infer U>
-      ? U
-      : Ref extends CollectionReference<infer U>
-      ? U
-      : never
-  >
+  Ref extends AnyReference,
+  Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [Ref, Q];

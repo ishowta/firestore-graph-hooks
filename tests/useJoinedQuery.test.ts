@@ -21,7 +21,9 @@ const [projects] = _useJoinedQuery(getProjects(), (project) => ({
   currentRef: {
     next: {},
   },
-  kanbans: extraField(getKanbans(project.__ref__), {}),
+  kanbans: extraField(getKanbans(project.__ref__), {
+    next: {},
+  }),
 }));
 
 type ExpectProjectsType = CollectionMetadata<Project> &
@@ -36,10 +38,23 @@ type ExpectProjectsType = CollectionMetadata<Project> &
       title: string;
       createdAt: Timestamp;
       prev?: DocumentReference<Kanban> | null;
-      next: undefined; // TODO
+      next?: (DocumentMetadata<Kanban> & Kanban) | null; // TODO
     };
     title?: string;
-    kanbans: CollectionMetadata<Kanban> & (DocumentMetadata<Kanban> & Kanban)[];
+    kanbans: CollectionMetadata<Kanban> &
+      (DocumentMetadata<Kanban> & {
+        title: string;
+        createdAt: Timestamp;
+        prev?: DocumentReference<Kanban> | null;
+        next?: (DocumentMetadata<Kanban> & Kanban) | null; // TODO
+      })[];
   })[];
 
 assertType<Equal<typeof projects, ExpectProjectsType>>();
+
+// assertType<
+//   Equal<
+//     Pick<typeof projects extends (infer T)[] ? T : never, "kanbans">,
+//     Pick<ExpectProjectsType extends (infer T)[] ? T : never, "kanbans">
+//   >
+// >();
