@@ -42,8 +42,8 @@ export const getProjects = () =>
 export type Kanban = {
   title: string;
   createdAt: Timestamp;
-  prev?: DocumentReference<Kanban> | null;
-  next: DocumentReference<Kanban> | null;
+  prevRef?: DocumentReference<Kanban> | null;
+  nextRef?: DocumentReference<Kanban> | null;
 };
 export const getKanbans = (projectRef: DocumentReference<Project>) =>
   collection(projectRef, "kanbans") as CollectionReference<Kanban>;
@@ -58,8 +58,8 @@ export type TODOList = {
   finished?: boolean;
   reactionList?: string[];
   createdAt: Timestamp;
-  prev?: DocumentReference<TODOList> | null;
-  next?: DocumentReference<TODOList> | null;
+  prevRef?: DocumentReference<TODOList> | null;
+  nextRef?: DocumentReference<TODOList> | null;
 };
 export const getTodoLists = (kanbanRef: DocumentReference<Kanban>) =>
   collection(kanbanRef, "todoLists") as CollectionReference<TODOList>;
@@ -99,8 +99,8 @@ export type TODO = {
       };
   completed?: boolean;
   timeoverReason?: string;
-  prev?: DocumentReference<TODOList> | null;
-  next?: DocumentReference<TODOList> | null;
+  prevRef?: DocumentReference<TODOList> | null;
+  nextRef?: DocumentReference<TODOList> | null;
   createdAt: Timestamp;
 };
 export const getTodos = (todoListRef: DocumentReference<TODOList>) =>

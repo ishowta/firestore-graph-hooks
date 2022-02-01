@@ -8,52 +8,50 @@ import {
 import { assertType, Equal } from "./helper";
 import { getKanbans, getProjects, Kanban, Project, TODO, User } from "./schema";
 
-const [projects] = _useJoinedQuery(getProjects(), (project) => ({
+let [projects] = _useJoinedQuery(getProjects(), (project) => ({
   ownerRef: (_user) => ({
     nowPlayingRef: (todo) => ({
       extraOnlyTestField: extraField(todo.__ref__, {}),
     }),
   }),
   currentRef: {
-    next: {},
+    nextRef: {},
   },
   kanbans: extraField(getKanbans(project.__ref__), {
-    next: {},
+    nextRef: {},
   }),
 }));
 
 type ExpectProjectsType = CollectionMetadata<Project> &
-  (DocumentMetadata<Project> & {
-    owner: DocumentMetadata<User> & {
-      createdAt: Timestamp;
-      name: string;
-      nowPlaying: DocumentMetadata<TODO> &
-        TODO & {
-          extraOnlyTestField: DocumentMetadata<TODO> & TODO;
+  (DocumentMetadata<Project> &
+    Project & {
+      owner: DocumentMetadata<User> &
+        User & {
+          nowPlaying: DocumentMetadata<TODO> &
+            TODO & {
+              extraOnlyTestField: DocumentMetadata<TODO> & TODO;
+            };
         };
-    };
-    createdAt: Timestamp;
-    current: DocumentMetadata<Kanban> & {
-      title: string;
-      createdAt: Timestamp;
-      prev?: DocumentReference<Kanban> | null;
-      next: (DocumentMetadata<Kanban> & Kanban) | null;
-    };
-    title?: string;
-    kanbans: CollectionMetadata<Kanban> &
-      (DocumentMetadata<Kanban> & {
-        title: string;
-        createdAt: Timestamp;
-        prev?: DocumentReference<Kanban> | null;
-        next: (DocumentMetadata<Kanban> & Kanban) | null;
-      })[];
-  })[];
+      current: DocumentMetadata<Kanban> &
+        Kanban & {
+          next: (DocumentMetadata<Kanban> & Kanban) | null;
+        };
+      kanbans: CollectionMetadata<Kanban> &
+        (DocumentMetadata<Kanban> &
+          Kanban & {
+            next: (DocumentMetadata<Kanban> & Kanban) | null;
+          })[];
+    })[];
 
 assertType<Equal<typeof projects, ExpectProjectsType>>();
+let expected: ExpectProjectsType = {} as any;
+projects = expected;
+expected = projects;
 
-// assertType<
-//   Equal<
-//     Pick<typeof projects extends (infer T)[] ? T : never, "owner">,
-//     Pick<ExpectProjectsType extends (infer T)[] ? T : never, "owner">
-//   >
-// >();
+// query result <: original document
+let firstOwner = projects[0].owner;
+let firstKanban = projects[0].kanbans;
+assertType<typeof projects extends Project[] ? true : false>();
+assertType<typeof firstOwner extends User ? true : false>();
+assertType<typeof firstKanban extends Kanban[] ? true : false>();
+let _raw: Project[] = projects;

@@ -42,10 +42,16 @@ type AnyReference =
 
 /**
  * ドキュメントのフィールドからリファレンスのフィールドのみを取り出す
+ *
+ * 元のドキュメントとの互換性を保つため`${string}Ref`の形のフィールドのみ使えるようにする
  */
-type PickRefField<T extends DocumentData> = {
-  [K in keyof T]: NonNullable<T[K]> extends AnyReference ? K : never;
-}[keyof T];
+type PickRefField<T extends DocumentData> = keyof {
+  [K in keyof T as K extends `${string}Ref` ? K : never]: NonNullable<
+    T[K]
+  > extends AnyReference
+    ? K
+    : never;
+};
 
 /**
  * クエリの型
@@ -119,8 +125,7 @@ type JoinedDataInner<
       : never;
   },
   keyof PickOptional<T> | keyof PickOptional<GraphQueryQueryType<T, Q>>
-> &
-  DocumentMetadata<T>;
+>;
 
 type RefToDoc<R extends AnyReference> = R extends
   | DocumentReference<infer D>
@@ -135,11 +140,16 @@ type JoinedData<
   Q extends GraphQuery<RefToDoc<R>>
 > = R extends DocumentReference<infer U>
   ? Q extends GraphQuery<U>
-    ? Expand<JoinedDataInner<U, Q>>
+    ? // append U for readable type
+      U & Expand<Omit<JoinedDataInner<U, Q>, keyof U>> & DocumentMetadata<U>
     : never
   : R extends CollectionReference<infer U>
   ? Q extends GraphQuery<U>
-    ? Expand<JoinedDataInner<U, Q>>[] & CollectionMetadata<U>
+    ? // append U for readable type
+      (U &
+        Expand<Omit<JoinedDataInner<U, Q>, keyof U>> &
+        DocumentMetadata<U>)[] &
+        CollectionMetadata<U>
     : never
   : never;
 
