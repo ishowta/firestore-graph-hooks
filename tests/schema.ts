@@ -41,7 +41,7 @@ export type Kanban = {
   title: string;
   createdAt: Timestamp;
   prev?: DocumentReference<Kanban> | null;
-  next?: DocumentReference<Kanban> | null;
+  next: DocumentReference<Kanban> | null;
 };
 export const getKanbans = (projectRef: DocumentReference<Project>) =>
   collection(projectRef, "kanbans") as CollectionReference<Kanban>;

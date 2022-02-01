@@ -8,11 +8,15 @@ import {
   Data,
   DocumentMetadata,
   extraField,
+  GraphQuery,
   ID,
+  PickRefField,
   _useJoinedQuery,
 } from "../useJoinedQuery";
 import { assertType, Equal } from "./helper";
 import { getKanbans, getProjects, Kanban, Project, TODO, User } from "./schema";
+
+type T2 = Exclude<keyof User, PickRefField<User>>;
 
 const [projects] = _useJoinedQuery(getProjects(), (project) => ({
   ownerRef: {
@@ -38,7 +42,7 @@ type ExpectProjectsType = CollectionMetadata<Project> &
       title: string;
       createdAt: Timestamp;
       prev?: DocumentReference<Kanban> | null;
-      next?: (DocumentMetadata<Kanban> & Kanban) | null; // TODO
+      next: (DocumentMetadata<Kanban> & Kanban) | null;
     };
     title?: string;
     kanbans: CollectionMetadata<Kanban> &
@@ -46,15 +50,18 @@ type ExpectProjectsType = CollectionMetadata<Project> &
         title: string;
         createdAt: Timestamp;
         prev?: DocumentReference<Kanban> | null;
-        next?: (DocumentMetadata<Kanban> & Kanban) | null; // TODO
+        next: (DocumentMetadata<Kanban> & Kanban) | null;
       })[];
   })[];
 
 assertType<Equal<typeof projects, ExpectProjectsType>>();
 
-// assertType<
-//   Equal<
-//     Pick<typeof projects extends (infer T)[] ? T : never, "kanbans">,
-//     Pick<ExpectProjectsType extends (infer T)[] ? T : never, "kanbans">
-//   >
-// >();
+assertType<
+  Equal<
+    Pick<typeof projects extends (infer T)[] ? T : never, "kanbans">,
+    Pick<ExpectProjectsType extends (infer T)[] ? T : never, "kanbans">
+  >
+>();
+projects[0].current.next;
+
+type A = GraphQuery<Project & { hogeRef: string }>;

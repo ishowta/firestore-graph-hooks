@@ -6,7 +6,6 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import { PickOptional, SelectiveOptional } from "./helper";
-import { RequiredPrimitive } from "./tests/helper";
 
 /**
  * FirestoreのID
@@ -43,29 +42,24 @@ type AnyReference =
 /**
  * ドキュメントのフィールドからリファレンスのフィールドのみを取り出す
  */
-type PickRefField<T extends DocumentData> = {
-  [K in keyof T]: RequiredPrimitive<T[K]> extends AnyReference ? K : never;
+export type PickRefField<T extends DocumentData> = {
+  [K in keyof T]: NonNullable<T[K]> extends AnyReference ? K : never;
 }[keyof T];
 
 /**
  * クエリの型
  */
-type GraphQuery<T extends DocumentData> =
+export type GraphQuery<T extends DocumentData> =
   | ({
-      [K in PickRefField<T>]?: T[K] extends
-        | (DocumentReference<infer U> | CollectionReference<infer U>)
-        | undefined
+      [K in PickRefField<T>]?: NonNullable<T[K]> extends
+        | DocumentReference<infer U>
+        | CollectionReference<infer U>
         ? U extends DocumentData
           ? GraphQuery<U>
           : never
         : never;
     } & {
-      // we need negated type https://github.com/microsoft/TypeScript/pull/29317#issuecomment-452973876
-      // [K in not PickRefField<T>]?: ...
-      [K in string]?:
-        | [AnyReference, Record<string, unknown>]
-        // rerフィールドの場合でもこちらと混ぜる必要があるためこれが必要
-        | Record<string, unknown>;
+      [K in Exclude<keyof T, PickRefField<T>>]?: never;
     })
   | ((data: Data<T>) => GraphQuery<T>);
 
