@@ -153,16 +153,22 @@ type JoinedData<
     : never
   : never;
 
-export declare function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
+export function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
   query: Q
-): [Expand<JoinedDataInner<{}, Q>>, boolean, Error];
+): [Expand<JoinedDataInner<{}, Q>>, boolean, Error] {
+  return {} as any;
+}
 
-export declare function useQuery<
+export function useQuery<
   Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
->(ref: Ref, query: Q): [JoinedData<Ref, Q>, boolean, Error];
+>(ref: Ref, query: Q): [JoinedData<Ref, Q>, boolean, Error] {
+  return {} as any;
+}
 
-export declare function field<
+export function field<
   Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
->(ref: Ref, query: Q): [Ref, Q];
+>(ref: Ref, query: Q): [Ref, Q] {
+  return {} as any;
+}
