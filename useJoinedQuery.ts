@@ -60,7 +60,7 @@ type PickRefField<T extends DocumentData> = keyof {
  */
 type GraphQuery<T extends DocumentData> =
   // ref fieldを含んだクエリ（extra fieldも入れられる）
-  | ({
+  | (({
       [K in PickRefField<T>]?: NonNullable<T[K]> extends
         | DocumentReference<infer U>
         | CollectionReference<infer U>
@@ -70,7 +70,7 @@ type GraphQuery<T extends DocumentData> =
         : never;
     } & {
       [K in Exclude<keyof T, PickRefField<T>>]?: never;
-    })
+    }) & { [K in string]: unknown })
   // extra fieldのみのクエリ
   | ({ [K in keyof T]?: never } & { [K in string]: unknown })
   // ドキュメントを引数にとってクエリを返す関数
