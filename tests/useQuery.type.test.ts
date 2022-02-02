@@ -6,7 +6,7 @@ import {
   useRootQuery,
   WithCollectionMetadata,
   WithMetadata,
-} from "../useJoinedQuery";
+} from "../useQuery";
 import { assertType, Equal } from "./helper";
 import {
   getKanbans,
@@ -20,29 +20,35 @@ import {
   User,
 } from "./schema";
 
-let [projects] = useQuery(getProjects(), (project) => ({
-  ownerRef: (_user) => ({
-    nowPlayingRef: (todo) => ({
-      extraOnlyTestField: field(todo.__ref__, {}),
+const types = () => {
+  let [projects] = useQuery(getProjects(), (project) => ({
+    ownerRef: (_user) => ({
+      nowPlayingRef: (todo) => ({
+        extraOnlyTestField: field(todo.__ref__, {}),
+      }),
     }),
-  }),
-  currentRef: (kanban) => ({
-    nextRef: {},
-    todoLists: field(getTodoLists(kanban.__ref__), {}),
-  }),
-  kanbans: field(getKanbans(project.__ref__), {
-    nextRef: {},
-  }),
-}));
+    currentRef: (kanban) => ({
+      nextRef: {},
+      todoLists: field(getTodoLists(kanban.__ref__), {}),
+    }),
+    kanbans: field(getKanbans(project.__ref__), {
+      nextRef: {},
+    }),
+  }));
 
-let [query2] = useRootQuery({
-  users: field(getUsers(), {}),
-  projects: field(getProjects(), {}),
-});
+  let [query2] = useRootQuery({
+    users: field(getUsers(), {}),
+    projects: field(getProjects(), {}),
+  });
 
-type ManuelaProject = typeof projects[number];
-type ManuelaOwner = ManuelaProject["owner"];
-type ManuelaKanban = ManuelaProject["kanbans"][number];
+  return [projects, query2] as const;
+};
+
+type ManuelaProjects = ReturnType<typeof types>[0];
+type ManuelaOwner = ManuelaProjects[number]["owner"];
+type ManuelaKanban = ManuelaProjects[number]["kanbans"][number];
+
+type Query2ResultType = ReturnType<typeof types>[1];
 
 type ExpectProjectsType = CollectionMetadata<Project> &
   (DocumentMetadata<Project> &
@@ -72,8 +78,8 @@ type ExpectQuery2Type = {
   projects: WithCollectionMetadata<Project>;
 };
 
-assertType<Equal<typeof projects, ExpectProjectsType>>();
-assertType<Equal<typeof query2, ExpectQuery2Type>>();
+assertType<Equal<ManuelaProjects, ExpectProjectsType>>();
+assertType<Equal<Query2ResultType, ExpectQuery2Type>>();
 assertType<
   Equal<
     ManuelaKanban,
@@ -82,14 +88,14 @@ assertType<
     }
   >
 >();
-let expected: ExpectProjectsType = {} as any;
-projects = expected;
-expected = projects;
+// let expected: ExpectProjectsType = {} as any;
+// projects = expected;
+// expected = projects;
 
 // query result <: original document
-let firstOwner = projects[0].owner;
-let firstKanban = projects[0].kanbans;
-assertType<typeof projects extends Project[] ? true : false>();
-assertType<typeof firstOwner extends User ? true : false>();
-assertType<typeof firstKanban extends Kanban[] ? true : false>();
-let _raw: Project[] = projects;
+assertType<ManuelaProjects extends Project[] ? true : false>();
+assertType<ManuelaProjects[number]["owner"] extends User ? true : false>();
+assertType<
+  ManuelaProjects[number]["kanbans"] extends Kanban[] ? true : false
+>();
+// let _raw: Project[] = projects;
