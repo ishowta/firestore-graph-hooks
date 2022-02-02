@@ -40,18 +40,28 @@ type AnyReference =
   | DocumentReference<DocumentData>
   | CollectionReference<DocumentData>;
 
+export type RefKeyword = "Ref";
+
 /**
  * ドキュメントのフィールドからリファレンスのフィールドのみを取り出す
  *
- * 元のドキュメントとの互換性を保つため`${string}Ref`の形のフィールドのみ使えるようにする
+ * 元のドキュメントとの互換性を保つため`${string}(Ref|_ref)`の形のフィールドのみ使えるようにする
  */
 type PickRefField<T extends DocumentData> = keyof {
-  [K in keyof T as K extends `${string}Ref` ? K : never]: NonNullable<
+  [K in keyof T as K extends `${string}${RefKeyword}` ? K : never]: NonNullable<
     T[K]
   > extends AnyReference
     ? K
     : never;
 };
+
+type RemoveRefSuffix<K> = K extends string
+  ? K extends `${infer S}${RefKeyword}`
+    ? S
+    : K
+  : never;
+
+type AddRefSuffix<K> = K extends string ? `${K}${RefKeyword}` : never;
 
 /**
  * クエリの型
@@ -61,18 +71,23 @@ type PickRefField<T extends DocumentData> = keyof {
 type GraphQuery<T extends DocumentData> =
   // ref fieldを含んだクエリ（extra fieldも入れられる）
   | (({
-      [K in PickRefField<T>]?: NonNullable<T[K]> extends
-        | DocumentReference<infer U>
-        | CollectionReference<infer U>
+      [K in RemoveRefSuffix<PickRefField<T>>]?: NonNullable<
+        T[AddRefSuffix<K>]
+      > extends DocumentReference<infer U> | CollectionReference<infer U>
         ? U extends DocumentData
           ? GraphQuery<U>
           : never
         : never;
     } & {
-      [K in Exclude<keyof T, PickRefField<T>>]?: never;
+      [K in Exclude<
+        keyof T,
+        PickRefField<T> | RemoveRefSuffix<PickRefField<T>>
+      >]?: never;
     }) & { [K in string]: unknown })
   // extra fieldのみのクエリ
-  | ({ [K in keyof T]?: never } & { [K in string]: unknown })
+  | ({ [K in keyof T | RemoveRefSuffix<keyof T>]?: never } & {
+      [K in string]: unknown;
+    })
   // ドキュメントを引数にとってクエリを返す関数
   | ((data: WithMetadata<T>) => GraphQuery<T>);
 
@@ -92,21 +107,26 @@ type JoinedDataInner<
     /**
      * ドキュメントのもともとのフィールド
      */
-    [K in Exclude<keyof T, keyof GraphQueryQueryType<T, Q>>]: T[K];
+    [K in keyof T]: T[K];
   } & {
     /**
      * クエリで指定されたリファレンスフィールド
      */
-    [K in keyof T &
-      keyof GraphQueryQueryType<T, Q> as K extends `${infer OriginalK}Ref`
-      ? OriginalK
-      : K]: RefToDoc<NonNullable<T[K]>> extends DocumentData
-      ? RequiredGraphQuery<GraphQueryQueryType<T, Q>[K]> extends GraphQuery<
-          RefToDoc<NonNullable<T[K]>>
-        >
-        ?
-            | JoinedData<T[K], RequiredGraphQuery<GraphQueryQueryType<T, Q>[K]>>
-            | (null extends T[K] ? null : never)
+    [K in RemoveRefSuffix<keyof T> &
+      keyof GraphQueryQueryType<T, Q>]: AddRefSuffix<K> extends infer OriginalK
+      ? OriginalK extends keyof T
+        ? RefToDoc<NonNullable<T[OriginalK]>> extends DocumentData
+          ? RequiredGraphQuery<GraphQueryQueryType<T, Q>[K]> extends GraphQuery<
+              RefToDoc<NonNullable<T[OriginalK]>>
+            >
+            ?
+                | JoinedData<
+                    T[OriginalK],
+                    RequiredGraphQuery<GraphQueryQueryType<T, Q>[K]>
+                  >
+                | (null extends T[OriginalK] ? null : never)
+            : never
+          : never
         : never
       : never;
   } & {
@@ -115,7 +135,7 @@ type JoinedDataInner<
      */
     [K in Exclude<
       keyof GraphQueryQueryType<T, Q>,
-      keyof T
+      RemoveRefSuffix<keyof T>
     >]: GraphQueryQueryType<T, Q>[K] extends [infer Ref, infer UQuery]
       ? Ref extends AnyReference
         ? Required<UQuery> extends GraphQuery<RefToDoc<Ref>>

@@ -21,17 +21,17 @@ import {
 } from "./schema";
 
 let [projects] = useJoinedQuery(getProjects(), (project) => ({
-  ownerRef: (_user) => ({
-    nowPlayingRef: (todo) => ({
+  owner: (_user) => ({
+    nowPlaying: (todo) => ({
       extraOnlyTestField: field(todo.__ref__, {}),
     }),
   }),
-  currentRef: (kanban) => ({
-    nextRef: {},
+  current: (kanban) => ({
+    next: {},
     todoLists: field(getTodoLists(kanban.__ref__), {}),
   }),
   kanbans: field(getKanbans(project.__ref__), {
-    nextRef: {},
+    next: {},
   }),
 }));
 
