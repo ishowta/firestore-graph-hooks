@@ -1,9 +1,9 @@
-import { DocumentReference, Timestamp } from "firebase/firestore";
 import {
   CollectionMetadata,
   DocumentMetadata,
   field,
-  useJoinedQuery,
+  useQuery,
+  useRootQuery,
   WithCollectionMetadata,
   WithMetadata,
 } from "../useJoinedQuery";
@@ -20,7 +20,7 @@ import {
   User,
 } from "./schema";
 
-let [projects] = useJoinedQuery(getProjects(), (project) => ({
+let [projects] = useQuery(getProjects(), (project) => ({
   ownerRef: (_user) => ({
     nowPlayingRef: (todo) => ({
       extraOnlyTestField: field(todo.__ref__, {}),
@@ -35,7 +35,7 @@ let [projects] = useJoinedQuery(getProjects(), (project) => ({
   }),
 }));
 
-let [query2] = useJoinedQuery({
+let [query2] = useRootQuery({
   users: field(getUsers(), {}),
   projects: field(getProjects(), {}),
 });
