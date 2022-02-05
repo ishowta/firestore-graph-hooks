@@ -6,7 +6,7 @@ import {
   useRootQuery,
   WithCollectionMetadata,
   WithMetadata,
-} from "../useQuery";
+} from "./lib/useQuery";
 import { assertType, Equal } from "./helper";
 import {
   getKanbans,
@@ -44,11 +44,11 @@ const types = () => {
   return [projects, query2] as const;
 };
 
-type ManuelaProjects = ReturnType<typeof types>[0];
+type ManuelaProjects = NonNullable<ReturnType<typeof types>[0]>;
 type ManuelaOwner = ManuelaProjects[number]["owner"];
 type ManuelaKanban = ManuelaProjects[number]["kanbans"][number];
 
-type Query2ResultType = ReturnType<typeof types>[1];
+type Query2ResultType = NonNullable<ReturnType<typeof types>[1]>;
 
 type ExpectProjectsType = CollectionMetadata<Project> &
   (DocumentMetadata<Project> &

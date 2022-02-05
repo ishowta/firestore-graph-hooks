@@ -1,4 +1,4 @@
-import { Project } from "./tests/schema";
+import { Project } from "../schema";
 
 export type PickOptional<T> = {
   [K in keyof T as {} extends Pick<T, K> ? K : never]-?: T[K];
