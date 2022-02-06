@@ -17,7 +17,7 @@ export type Second = number & {};
 export type User = {
   createdAt: Timestamp;
   name: string;
-  nowPlayingRef: DocumentReference<TODO>;
+  nowPlayingRef?: DocumentReference<TODO>;
 };
 export const getUsers = () =>
   collection(firestore, "users") as CollectionReference<User>;
@@ -29,7 +29,6 @@ export const getUsers = () =>
 export type Project = {
   ownerRef: DocumentReference<User>;
   createdAt: Timestamp;
-  currentRef: DocumentReference<Kanban>;
   title?: string;
 };
 export const getProjects = () =>
@@ -42,11 +41,22 @@ export const getProjects = () =>
 export type Kanban = {
   title: string;
   createdAt: Timestamp;
-  prevRef?: DocumentReference<Kanban> | null;
-  nextRef?: DocumentReference<Kanban> | null;
 };
 export const getKanbans = (projectRef: DocumentReference<Project>) =>
   collection(projectRef, "kanbans") as CollectionReference<Kanban>;
+
+/**
+ * カンバンオーダー
+ * /projects/{projectID}/metadata/kanbanOrder
+ */
+export type KanbanOrder = {
+  order: DocumentReference<Kanban>[];
+};
+export const getKanbanOrder = (projectRef: DocumentReference<Project>) =>
+  doc(
+    collection(projectRef, "metadata"),
+    "kanbanOrder"
+  ) as DocumentReference<KanbanOrder>;
 
 /**
  * TODOリスト
@@ -58,8 +68,6 @@ export type TODOList = {
   finished?: boolean;
   reactionList?: string[];
   createdAt: Timestamp;
-  prevRef?: DocumentReference<TODOList> | null;
-  nextRef?: DocumentReference<TODOList> | null;
 };
 export const getTodoLists = (kanbanRef: DocumentReference<Kanban>) =>
   collection(kanbanRef, "todoLists") as CollectionReference<TODOList>;
@@ -69,7 +77,7 @@ export const getTodoLists = (kanbanRef: DocumentReference<Kanban>) =>
  * /projects/{projectID}/kanbans/{kanbanID}/metadata/todoListOrder
  */
 export type TODOListOrder = {
-  order: ID[];
+  order: DocumentReference<TODOList>[];
 };
 export const getTODOListOrder = (kanbanRef: DocumentReference<Kanban>) =>
   doc(
@@ -87,7 +95,7 @@ export type TODO = {
    * 予定されたタスクにかかる時間
    */
   scheduledTime: Second;
-  timer:
+  timer?:
     | {
         isWorking: false;
         time: Second;
@@ -99,8 +107,6 @@ export type TODO = {
       };
   completed?: boolean;
   timeoverReason?: string;
-  prevRef?: DocumentReference<TODOList> | null;
-  nextRef?: DocumentReference<TODOList> | null;
   createdAt: Timestamp;
 };
 export const getTodos = (todoListRef: DocumentReference<TODOList>) =>
@@ -111,7 +117,7 @@ export const getTodos = (todoListRef: DocumentReference<TODOList>) =>
  * /projects/{projectID}/kanbans/{kanbanID}/todoLists/{todoListID}/metadata/todoOrder
  */
 export type TODOOrder = {
-  order: ID[];
+  order: DocumentReference<TODO>[];
 };
 export const getTODOOrder = (todoListRef: DocumentReference<TODOList>) =>
   doc(

@@ -40,24 +40,13 @@ export type GraphDocumentSnapshot<T extends DocumentData> =
 export type ID = string & {};
 
 /**
- * 得られるDocumentに付属するメタデータ
- *
- * TODO: DocumentSnapshotの`data()`を呼んで展開してしまうので平らにしても問題ないはず
- */
-export type DocumentMetadata<T> = {
-  __snapshot__: DocumentSnapshot<T>;
-  __ref__: DocumentReference<T>;
-  __id__: ID;
-};
-
-/**
  * 得られるCollectionに付属するメタデータ
  */
 export type CollectionMetadata<T> = {
   __snapshot__: QuerySnapshot<T>;
 };
 
-export type WithMetadata<T extends DocumentData> = DocumentMetadata<T> & T;
+export type WithMetadata<T extends DocumentData> = GraphDocumentSnapshot<T>;
 
 export type WithCollectionMetadata<T extends DocumentData> =
   CollectionMetadata<T> & WithMetadata<T>[];
@@ -95,9 +84,13 @@ type GraphQuery<T extends DocumentData> =
         : never;
     } & {
       [K in Exclude<keyof T, PickRefField<T>>]?: never;
-    }) & { [K in string]: unknown })
+    }) & {
+      [K in string]: GraphQuery<DocumentData> | [AnyReference, unknown];
+    })
   // extra fieldのみのクエリ
-  | ({ [K in keyof T]?: never } & { [K in string]: unknown })
+  | ({ [K in keyof T]?: never } & {
+      [K in string]: GraphQuery<DocumentData> | [AnyReference, unknown];
+    })
   // ドキュメントを引数にとってクエリを返す関数
   | ((data: WithMetadata<T>) => GraphQuery<T>);
 
@@ -251,6 +244,13 @@ const insert = <T>(arr: T[], value: T, index: number): T[] => {
     .concat(arr.slice(index, arr.length));
 };
 
+const detectQueryType = (key: string, query: any): "external" | "extension" => {
+  // フィールドがオプショナルフィールドである場合、実態が無いので拡張フィールドなのか外部キーなのかの区別がつかない。
+  // 仕方がないので拡張キーは`[ref, query]`の形式であるとしてそれで判断する
+  // documentKeys.includes(subSubQueryKey) &&
+  return Array.isArray(query) ? "extension" : "external";
+};
+
 class GraphCollectionQueryListener {
   ref: Query;
   subQuery: any;
@@ -280,7 +280,19 @@ class GraphCollectionQueryListener {
       handleUpdate(this.result);
     };
 
-    console.log(`onSnapshot ${(ref as any).path}`);
+    const checkUpdate = () => {
+      console.log("loadedlist", this.subSubQueryLoadedList);
+      if (
+        this.subSubQueryLoadedList.every((subSubQueryLoaded) =>
+          Object.values(subSubQueryLoaded).every((res: any) => res)
+        )
+      ) {
+        console.log("update", ref, query);
+        update();
+      }
+    };
+
+    console.log(`set onSnapshot ${(ref as any).path}`);
     this.listener = onSnapshot(ref, (snapshot) => {
       for (const docChange of snapshot.docChanges()) {
         console.log(docChange.type);
@@ -304,50 +316,103 @@ class GraphCollectionQueryListener {
               {},
               docChange.newIndex
             );
-            for (const subSubQueryKey of Object.keys(subQuery)) {
-              this.subSubQueryLoadedList[docChange.newIndex][subSubQueryKey] =
-                false;
+            for (const [subSubQueryKey, subSubQuery] of Object.entries(
+              subQuery
+            ) as [any, any]) {
+              console.log(
+                "queryType",
+                detectQueryType(subSubQueryKey, subSubQuery),
+                subSubQueryKey,
+                subSubQuery
+              );
+              switch (detectQueryType(subSubQueryKey, subSubQuery)) {
+                case "external": {
+                  const subSubQueryRef =
+                    graphDocumentSnapshot.data[subSubQueryKey];
+                  if (subSubQueryRef != null) {
+                    this.subSubQueryLoadedList[docChange.newIndex][
+                      subSubQueryKey
+                    ] = false;
+                  }
+                  break;
+                }
+                case "extension": {
+                  this.subSubQueryLoadedList[docChange.newIndex][
+                    subSubQueryKey
+                  ] = false;
+                  break;
+                }
+              }
             }
+            console.log("loadedList:=", this.subSubQueryLoadedList);
             const subQueryListeners: Record<string, GraphQueryListener> = {};
             for (const [subSubQueryKey, subSubQuery] of Object.entries(
               subQuery
             ) as [any, any]) {
-              if (documentKeys.includes(subSubQueryKey)) {
-                // 外部キー
-                subQueryListeners[subSubQueryKey] =
-                  new GraphCollectionQueryListener(
-                    graphDocumentSnapshot.data[subSubQueryKey],
-                    subSubQuery,
-                    (result: any) => {
-                      const index = this.result.findIndex(
-                        (res) => res.ref.path === docChange.doc.ref.path
+              const subSubQueryRef = graphDocumentSnapshot.data[subSubQueryKey];
+              switch (detectQueryType(subSubQueryKey, subSubQuery)) {
+                case "external": {
+                  console.log("external", subSubQuery, subSubQueryRef);
+                  if (subSubQueryRef == null) {
+                    continue;
+                  }
+                  if (
+                    !(
+                      subSubQueryRef instanceof DocumentReference ||
+                      subSubQueryRef instanceof Query
+                    )
+                  ) {
+                    throw new Error(
+                      `Unreachable. Expect ref, get ${subSubQueryRef}.`
+                    );
+                  }
+                  // 外部キー
+                  if (subSubQueryRef instanceof Query) {
+                    subQueryListeners[subSubQueryKey] =
+                      new GraphCollectionQueryListener(
+                        subSubQueryRef,
+                        subSubQuery,
+                        (result: any) => {
+                          const index = this.result.findIndex(
+                            (res) => res.ref.path === docChange.doc.ref.path
+                          );
+                          if (index !== -1) {
+                            this.result[index]["data"][subSubQueryKey] = result;
+                            this.subSubQueryLoadedList[index][subSubQueryKey] =
+                              true;
+                            checkUpdate();
+                          }
+                        },
+                        () => {}
                       );
-                      if (index !== -1) {
-                        (this.result[index] as any)[subSubQueryKey] = result;
-                        this.subSubQueryLoadedList[index][subSubQueryKey] =
-                          true;
-                      }
-                    },
-                    () => {}
-                  );
-              } else {
-                // 拡張キー
-                subQueryListeners[subSubQueryKey] =
-                  new GraphCollectionQueryListener(
-                    subSubQuery[0],
-                    subSubQuery[1],
-                    (result: any) => {
-                      const index = this.result.findIndex(
-                        (res) => res.ref.path === docChange.doc.ref.path
-                      );
-                      if (index !== -1) {
-                        (this.result[index] as any)[subSubQueryKey] = result;
-                        this.subSubQueryLoadedList[index][subSubQueryKey] =
-                          true;
-                      }
-                    },
-                    () => {}
-                  );
+                  } else {
+                    // TODO
+                    throw new Error("!unimplemented");
+                  }
+                  break;
+                }
+                case "extension": {
+                  // 拡張キー
+                  console.log("extension", subSubQuery);
+                  subQueryListeners[subSubQueryKey] =
+                    new GraphCollectionQueryListener(
+                      subSubQuery[0],
+                      subSubQuery[1],
+                      (result: any) => {
+                        const index = this.result.findIndex(
+                          (res) => res.ref.path === docChange.doc.ref.path
+                        );
+                        if (index !== -1) {
+                          this.result[index]["data"][subSubQueryKey] = result;
+                          this.subSubQueryLoadedList[index][subSubQueryKey] =
+                            true;
+                          checkUpdate();
+                        }
+                      },
+                      () => {}
+                    );
+                  break;
+                }
               }
             }
             this.subQueryListenersCollection[docChange.doc.ref.path] =
@@ -355,18 +420,14 @@ class GraphCollectionQueryListener {
             break;
           }
           case "removed":
+            // TODO
             break;
           case "modified":
+            // TODO
             break;
         }
       }
-      if (
-        this.subSubQueryLoadedList.every((subSubQueryLoaded) =>
-          Object.values(subSubQueryLoaded).every((res: any) => res)
-        )
-      ) {
-        update();
-      }
+      checkUpdate();
     });
   }
 
@@ -427,5 +488,5 @@ export function field<
   Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(ref: Ref, query: Q): [Ref, Q] {
-  return {} as any;
+  return [ref, query];
 }

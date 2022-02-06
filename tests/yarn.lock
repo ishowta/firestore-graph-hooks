@@ -702,6 +702,18 @@
     estree-walker "^2.0.1"
     picomatch "^2.2.2"
 
+"@types/lodash-es@^4.17.5":
+  version "4.17.5"
+  resolved "https://registry.yarnpkg.com/@types/lodash-es/-/lodash-es-4.17.5.tgz#1c3fdd16849d84aea43890b1c60da379fb501353"
+  integrity sha512-SHBoI8/0aoMQWAgUHMQ599VM6ZiSKg8sh/0cFqqlQQMyY9uEplc0ULU5yQNzcvdR4ZKa0ey8+vFmahuRbOCT1A==
+  dependencies:
+    "@types/lodash" "*"
+
+"@types/lodash@*":
+  version "4.14.178"
+  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.178.tgz#341f6d2247db528d4a13ddbb374bcdc80406f4f8"
+  integrity sha512-0d5Wd09ItQWH1qFbEyQ7oTQ3GZrMfth5JkbN3EvTKLXcHLRDSXeLnlvlOn0wvxVIwK5o2M8JzP/OWz7T3NRsbw==
+
 "@types/long@^4.0.1":
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/@types/long/-/long-4.0.1.tgz#459c65fa1867dafe6a8f322c4c51695663cc55e9"
@@ -1180,6 +1192,11 @@ lie@~3.3.0:
   integrity sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==
   dependencies:
     immediate "~3.0.5"
+
+lodash-es@^4.17.21:
+  version "4.17.21"
+  resolved "https://registry.yarnpkg.com/lodash-es/-/lodash-es-4.17.21.tgz#43e626c46e6591b7750beb2b50117390c609e3ee"
+  integrity sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==
 
 lodash.camelcase@^4.3.0:
   version "4.3.0"

@@ -27,10 +27,6 @@ const types = () => {
         extraOnlyTestField: field(todo.__ref__, {}),
       }),
     }),
-    currentRef: (kanban) => ({
-      nextRef: {},
-      todoLists: field(getTodoLists(kanban.__ref__), {}),
-    }),
     kanbans: field(getKanbans(project.__ref__), {
       nextRef: {},
     }),
@@ -59,12 +55,6 @@ type ExpectProjectsType = CollectionMetadata<Project> &
             TODO & {
               extraOnlyTestField: DocumentMetadata<TODO> & TODO;
             };
-        };
-      current: DocumentMetadata<Kanban> &
-        Kanban & {
-          next: (DocumentMetadata<Kanban> & Kanban) | null;
-          todoLists: (DocumentMetadata<TODOList> & TODOList)[] &
-            CollectionMetadata<TODOList>;
         };
       kanbans: CollectionMetadata<Kanban> &
         (DocumentMetadata<Kanban> &
