@@ -7,10 +7,10 @@ import {
   FirestoreError,
   Query,
   queryEqual,
-  onSnapshot,
   QueryDocumentSnapshot,
   SnapshotOptions,
   SnapshotMetadata,
+  onSnapshot,
 } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PickOptional, SelectiveOptional } from "./helper";
@@ -244,11 +244,19 @@ const makeGraphDocumentSnapshot = <T>(
   }
 };
 
+const insert = <T>(arr: T[], value: T, index: number): T[] => {
+  return arr
+    .slice(0, index)
+    .concat([value])
+    .concat(arr.slice(index, arr.length));
+};
+
 class GraphCollectionQueryListener {
   ref: Query;
   subQuery: any;
   listener: any;
-  result: any;
+  result: GraphDocumentSnapshot<any>[];
+  subSubQueryLoadedList: Record<string, boolean>[];
   subQueryListenersCollection: Record<
     string,
     Record<string, GraphQueryListener>
@@ -264,29 +272,43 @@ class GraphCollectionQueryListener {
     this.loading = true;
     this.ref = ref;
     this.subQuery = query;
-    this.result = {};
+    this.result = [];
+    this.subSubQueryLoadedList = [];
     this.subQueryListenersCollection = {};
 
     const update = () => {
       handleUpdate(this.result);
     };
 
+    console.log(`onSnapshot ${(ref as any).path}`);
     this.listener = onSnapshot(ref, (snapshot) => {
       for (const docChange of snapshot.docChanges()) {
+        console.log(docChange.type);
         switch (docChange.type) {
           case "added": {
             const graphDocumentSnapshot = makeGraphQueryDocumentSnapshot(
               docChange.doc
             );
             const documentKeys = Object.keys(graphDocumentSnapshot.data);
-            this.result[docChange.doc.ref.path] = {
-              snapshot: graphDocumentSnapshot,
-            };
-            const subQueryListeners: Record<string, GraphQueryListener> = {};
             const subQuery =
               typeof this.subQuery === "function"
                 ? this.subQuery(graphDocumentSnapshot)
                 : this.subQuery;
+            this.result = insert(
+              this.result,
+              graphDocumentSnapshot,
+              docChange.newIndex
+            );
+            this.subSubQueryLoadedList = insert(
+              this.subSubQueryLoadedList,
+              {},
+              docChange.newIndex
+            );
+            for (const subSubQueryKey of Object.keys(subQuery)) {
+              this.subSubQueryLoadedList[docChange.newIndex][subSubQueryKey] =
+                false;
+            }
+            const subQueryListeners: Record<string, GraphQueryListener> = {};
             for (const [subSubQueryKey, subSubQuery] of Object.entries(
               subQuery
             ) as [any, any]) {
@@ -297,8 +319,14 @@ class GraphCollectionQueryListener {
                     graphDocumentSnapshot.data[subSubQueryKey],
                     subSubQuery,
                     (result: any) => {
-                      this.result[docChange.doc.ref.path]["result"] = result;
-                      update();
+                      const index = this.result.findIndex(
+                        (res) => res.ref.path === docChange.doc.ref.path
+                      );
+                      if (index !== -1) {
+                        (this.result[index] as any)[subSubQueryKey] = result;
+                        this.subSubQueryLoadedList[index][subSubQueryKey] =
+                          true;
+                      }
                     },
                     () => {}
                   );
@@ -309,8 +337,14 @@ class GraphCollectionQueryListener {
                     subSubQuery[0],
                     subSubQuery[1],
                     (result: any) => {
-                      this.result[docChange.doc.ref.path]["result"] = result;
-                      update();
+                      const index = this.result.findIndex(
+                        (res) => res.ref.path === docChange.doc.ref.path
+                      );
+                      if (index !== -1) {
+                        (this.result[index] as any)[subSubQueryKey] = result;
+                        this.subSubQueryLoadedList[index][subSubQueryKey] =
+                          true;
+                      }
                     },
                     () => {}
                   );
@@ -326,11 +360,18 @@ class GraphCollectionQueryListener {
             break;
         }
       }
+      if (
+        this.subSubQueryLoadedList.every((subSubQueryLoaded) =>
+          Object.values(subSubQueryLoaded).every((res: any) => res)
+        )
+      ) {
+        update();
+      }
     });
   }
 
   updateQuery(newRef: any, newQuery: any): boolean {
-    throw new Error("unimplemented");
+    return false;
   }
 }
 
@@ -345,30 +386,41 @@ export function useQuery<
   ref: Ref,
   query: Q
 ): [JoinedData<Ref, Q> | undefined, boolean, Error | undefined] {
-  const [value, setValue] = useState<JoinedData<Ref, Q>>();
-  const [loading, setLoading] = useState(true);
+  const [{ value, loading }, setResult] = useState<{
+    value: JoinedData<Ref, Q> | undefined;
+    loading: boolean;
+  }>({
+    value: undefined,
+    loading: true,
+  });
   const [error, setError] = useState<FirestoreError>();
   const listener = useRef<GraphCollectionQueryListener>();
 
-  if (listener.current === undefined) {
+  useEffect(() => {
     if (ref instanceof Query) {
       listener.current = new GraphCollectionQueryListener(
         ref,
         query,
         (result) => {
-          setValue(result);
-          setLoading(false);
+          setResult({ value: result, loading: false });
         },
         () => {
           setError(error);
         }
       );
     }
-  } else {
-    listener.current.updateQuery(ref, query);
-  }
+  }, []);
 
-  return [value, loading, error];
+  // update query and determine loading state
+  const immediateLoading = useMemo(() => {
+    if (listener.current?.updateQuery(ref, query)) {
+      setResult(({ value }) => ({ value, loading: true }));
+      return true;
+    }
+    return loading;
+  }, [ref, query]);
+
+  return [value, immediateLoading, error];
 }
 
 export function field<

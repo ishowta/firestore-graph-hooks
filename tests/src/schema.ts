@@ -20,7 +20,7 @@ export type User = {
   nowPlayingRef: DocumentReference<TODO>;
 };
 export const getUsers = () =>
-  collection(firestore, "userse") as CollectionReference<User>;
+  collection(firestore, "users") as CollectionReference<User>;
 
 /**
  * プロジェクト
