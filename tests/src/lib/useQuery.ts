@@ -85,11 +85,11 @@ type GraphQuery<T extends DocumentData> =
     } & {
       [K in Exclude<keyof T, PickRefField<T>>]?: never;
     }) & {
-      [K in string]: GraphQuery<DocumentData> | [AnyReference, unknown];
+      [K in string]: unknown | [AnyReference, unknown];
     })
   // extra fieldのみのクエリ
   | ({ [K in keyof T]?: never } & {
-      [K in string]: GraphQuery<DocumentData> | [AnyReference, unknown];
+      [K in string]: unknown | [AnyReference, unknown];
     })
   // ドキュメントを引数にとってクエリを返す関数
   | ((data: WithMetadata<T>) => GraphQuery<T>);
@@ -251,17 +251,228 @@ const detectQueryType = (key: string, query: any): "external" | "extension" => {
   return Array.isArray(query) ? "extension" : "external";
 };
 
+class GraphDocumentQueryListener {
+  ref: DocumentReference;
+  listener: any;
+  query: any;
+  queryListeners: Record<string, Record<string, GraphQueryListener>>;
+  result: GraphDocumentSnapshot<any> | undefined;
+  loading: boolean;
+  subQueryLoaded: Record<string, boolean>;
+
+  constructor(
+    ref: DocumentReference,
+    query: any,
+    handleUpdate: (result: any) => void,
+    handleError: (error: FirestoreError) => void
+  ) {
+    this.loading = true;
+    this.ref = ref;
+    this.query = query;
+    this.queryListeners = {};
+    this.result = undefined;
+    this.subQueryLoaded = {};
+
+    const update = () => {
+      handleUpdate(this.result);
+    };
+
+    const checkUpdate = () => {
+      console.log("loadedlist", this.subQueryLoaded);
+      if (Object.values(this.subQueryLoaded).every((res) => res)) {
+        console.log("update", ref, query);
+        update();
+      }
+    };
+
+    console.log(`set onSnapshot ${(ref as any).path}`);
+    let initialized = false;
+    this.listener = onSnapshot(ref, (snapshot) => {
+      const docChange = initialized
+        ? snapshot.exists()
+          ? ({
+              type: "modified",
+              doc: snapshot,
+            } as const)
+          : ({
+              type: "removed",
+              doc: snapshot,
+            } as const)
+        : snapshot.exists()
+        ? ({
+            type: "added",
+            doc: snapshot,
+          } as const)
+        : ({
+            type: "notExists",
+            doc: snapshot,
+          } as const);
+      initialized = true;
+      console.log(docChange.type);
+      switch (docChange.type) {
+        case "added": {
+          const graphDocumentSnapshot = makeGraphQueryDocumentSnapshot(
+            docChange.doc
+          );
+          const documentKeys = Object.keys(graphDocumentSnapshot.data);
+          const query =
+            typeof this.query === "function"
+              ? this.query(graphDocumentSnapshot)
+              : this.query;
+          this.result = graphDocumentSnapshot;
+          this.subQueryLoaded = {};
+          for (const [subSubQueryKey, subSubQuery] of Object.entries(query) as [
+            any,
+            any
+          ]) {
+            console.log(
+              "queryType",
+              detectQueryType(subSubQueryKey, subSubQuery),
+              subSubQueryKey,
+              subSubQuery
+            );
+            switch (detectQueryType(subSubQueryKey, subSubQuery)) {
+              case "external": {
+                const subQueryRef = graphDocumentSnapshot.data[subSubQueryKey];
+                if (subQueryRef != null) {
+                  this.subQueryLoaded[subSubQueryKey] = false;
+                }
+                break;
+              }
+              case "extension": {
+                this.subQueryLoaded[subSubQueryKey] = false;
+                break;
+              }
+            }
+          }
+          console.log("loadedList:=", this.subQueryLoaded);
+          const queryListeners: Record<string, GraphQueryListener> = {};
+          for (const [subQueryKey, subQuery] of Object.entries(query) as [
+            any,
+            any
+          ]) {
+            const subQueryRef = graphDocumentSnapshot.data[subQueryKey];
+            switch (detectQueryType(subQueryKey, subQuery)) {
+              case "external": {
+                console.log("external", subQuery, subQueryRef);
+                if (subQueryRef == null) {
+                  continue;
+                }
+                if (
+                  !(
+                    subQueryRef instanceof DocumentReference ||
+                    subQueryRef instanceof Query
+                  )
+                ) {
+                  throw new Error(
+                    `Unreachable. Expect ref, get ${subQueryRef}.`
+                  );
+                }
+                // 外部キー
+                const subQueryKeyName = (() => {
+                  if ((subQueryKey as string).endsWith("Ref")) {
+                    return (subQueryKey as string).substring(
+                      0,
+                      (subQueryKey as string).length - 3
+                    );
+                  } else {
+                    throw new Error(
+                      "Unexpected. field key without endsWith `Ref` is not suppoerted"
+                    );
+                  }
+                })();
+                if (subQueryRef instanceof Query) {
+                  queryListeners[subQueryKey] =
+                    new GraphCollectionQueryListener(
+                      subQueryRef,
+                      subQuery,
+                      (result: any) => {
+                        this.result!["data"][subQueryKeyName] = result;
+                        this.subQueryLoaded[subQueryKey] = true;
+                        checkUpdate();
+                      },
+                      () => {}
+                    );
+                } else if (subQueryRef instanceof DocumentReference) {
+                  queryListeners[subQueryKey] = new GraphDocumentQueryListener(
+                    subQueryRef,
+                    subQuery,
+                    (result: any) => {
+                      this.result!["data"][subQueryKeyName] = result;
+                      this.subQueryLoaded[subQueryKey] = true;
+                      checkUpdate();
+                    },
+                    () => {}
+                  );
+                }
+                break;
+              }
+              case "extension": {
+                // 拡張キー
+                const extensionRef = subQuery[0];
+                const extensionQuery = subQuery[1];
+
+                if (extensionRef instanceof Query) {
+                  console.log("extension", subQuery);
+                  queryListeners[subQueryKey] =
+                    new GraphCollectionQueryListener(
+                      extensionRef,
+                      extensionQuery,
+                      (result: any) => {
+                        this.result!["data"][subQueryKey] = result;
+                        this.subQueryLoaded[subQueryKey] = true;
+                        checkUpdate();
+                      },
+                      () => {}
+                    );
+                } else if (extensionRef instanceof DocumentReference) {
+                  console.log("extension", subQuery);
+                  queryListeners[subQueryKey] = new GraphDocumentQueryListener(
+                    extensionRef,
+                    extensionQuery,
+                    (result: any) => {
+                      this.result!["data"][subQueryKey] = result;
+                      this.subQueryLoaded[subQueryKey] = true;
+                      checkUpdate();
+                    },
+                    () => {}
+                  );
+                }
+
+                break;
+              }
+            }
+          }
+          this.queryListeners[docChange.doc.ref.path] = queryListeners;
+          break;
+        }
+        case "removed":
+          // TODO
+          break;
+        case "modified":
+          // TODO
+          break;
+        case "notExists":
+          // TODO
+          break;
+      }
+      checkUpdate();
+    });
+  }
+
+  updateQuery(newRef: any, newQuery: any): boolean {
+    return false;
+  }
+}
+
 class GraphCollectionQueryListener {
   ref: Query;
-  subQuery: any;
   listener: any;
+  query: any;
+  queryListenersCollection: Record<string, Record<string, GraphQueryListener>>;
   result: GraphDocumentSnapshot<any>[];
-  subSubQueryLoadedList: Record<string, boolean>[];
-  subQueryListenersCollection: Record<
-    string,
-    Record<string, GraphQueryListener>
-  >;
   loading: boolean;
+  subQueryLoadedList: Record<string, boolean>[];
 
   constructor(
     ref: Query,
@@ -271,19 +482,19 @@ class GraphCollectionQueryListener {
   ) {
     this.loading = true;
     this.ref = ref;
-    this.subQuery = query;
+    this.query = query;
     this.result = [];
-    this.subSubQueryLoadedList = [];
-    this.subQueryListenersCollection = {};
+    this.subQueryLoadedList = [];
+    this.queryListenersCollection = {};
 
     const update = () => {
       handleUpdate(this.result);
     };
 
     const checkUpdate = () => {
-      console.log("loadedlist", this.subSubQueryLoadedList);
+      console.log("loadedlist", this.subQueryLoadedList);
       if (
-        this.subSubQueryLoadedList.every((subSubQueryLoaded) =>
+        this.subQueryLoadedList.every((subSubQueryLoaded) =>
           Object.values(subSubQueryLoaded).every((res: any) => res)
         )
       ) {
@@ -302,121 +513,170 @@ class GraphCollectionQueryListener {
               docChange.doc
             );
             const documentKeys = Object.keys(graphDocumentSnapshot.data);
-            const subQuery =
-              typeof this.subQuery === "function"
-                ? this.subQuery(graphDocumentSnapshot)
-                : this.subQuery;
+            const query =
+              typeof this.query === "function"
+                ? this.query(graphDocumentSnapshot)
+                : this.query;
             this.result = insert(
               this.result,
               graphDocumentSnapshot,
               docChange.newIndex
             );
-            this.subSubQueryLoadedList = insert(
-              this.subSubQueryLoadedList,
+            this.subQueryLoadedList = insert(
+              this.subQueryLoadedList,
               {},
               docChange.newIndex
             );
-            for (const [subSubQueryKey, subSubQuery] of Object.entries(
-              subQuery
-            ) as [any, any]) {
+            for (const [subQueryKey, subQuery] of Object.entries(query) as [
+              any,
+              any
+            ]) {
               console.log(
                 "queryType",
-                detectQueryType(subSubQueryKey, subSubQuery),
-                subSubQueryKey,
-                subSubQuery
+                detectQueryType(subQueryKey, subQuery),
+                subQueryKey,
+                subQuery
               );
-              switch (detectQueryType(subSubQueryKey, subSubQuery)) {
+              switch (detectQueryType(subQueryKey, subQuery)) {
                 case "external": {
-                  const subSubQueryRef =
-                    graphDocumentSnapshot.data[subSubQueryKey];
-                  if (subSubQueryRef != null) {
-                    this.subSubQueryLoadedList[docChange.newIndex][
-                      subSubQueryKey
-                    ] = false;
+                  const subQueryRef = graphDocumentSnapshot.data[subQueryKey];
+                  if (subQueryRef != null) {
+                    this.subQueryLoadedList[docChange.newIndex][subQueryKey] =
+                      false;
                   }
                   break;
                 }
                 case "extension": {
-                  this.subSubQueryLoadedList[docChange.newIndex][
-                    subSubQueryKey
-                  ] = false;
+                  this.subQueryLoadedList[docChange.newIndex][subQueryKey] =
+                    false;
                   break;
                 }
               }
             }
-            console.log("loadedList:=", this.subSubQueryLoadedList);
-            const subQueryListeners: Record<string, GraphQueryListener> = {};
-            for (const [subSubQueryKey, subSubQuery] of Object.entries(
-              subQuery
-            ) as [any, any]) {
-              const subSubQueryRef = graphDocumentSnapshot.data[subSubQueryKey];
-              switch (detectQueryType(subSubQueryKey, subSubQuery)) {
+            console.log("loadedList:=", this.subQueryLoadedList);
+            const queryListeners: Record<string, GraphQueryListener> = {};
+            for (const [subQueryKey, subQuery] of Object.entries(query) as [
+              any,
+              any
+            ]) {
+              const subQueryRef = graphDocumentSnapshot.data[subQueryKey];
+              switch (detectQueryType(subQueryKey, subQuery)) {
                 case "external": {
-                  console.log("external", subSubQuery, subSubQueryRef);
-                  if (subSubQueryRef == null) {
+                  console.log("external", subQuery, subQueryRef);
+                  if (subQueryRef == null) {
                     continue;
                   }
                   if (
                     !(
-                      subSubQueryRef instanceof DocumentReference ||
-                      subSubQueryRef instanceof Query
+                      subQueryRef instanceof DocumentReference ||
+                      subQueryRef instanceof Query
                     )
                   ) {
                     throw new Error(
-                      `Unreachable. Expect ref, get ${subSubQueryRef}.`
+                      `Unreachable. Expect ref, get ${subQueryRef}.`
                     );
                   }
                   // 外部キー
-                  if (subSubQueryRef instanceof Query) {
-                    subQueryListeners[subSubQueryKey] =
+                  const subQueryKeyName = (() => {
+                    if ((subQueryKey as string).endsWith("Ref")) {
+                      return (subQueryKey as string).substring(
+                        0,
+                        (subQueryKey as string).length - 3
+                      );
+                    } else {
+                      throw new Error(
+                        "Unexpected. field key without endsWith `Ref` is not suppoerted"
+                      );
+                    }
+                  })();
+                  if (subQueryRef instanceof Query) {
+                    queryListeners[subQueryKey] =
                       new GraphCollectionQueryListener(
-                        subSubQueryRef,
-                        subSubQuery,
+                        subQueryRef,
+                        subQuery,
                         (result: any) => {
                           const index = this.result.findIndex(
                             (res) => res.ref.path === docChange.doc.ref.path
                           );
                           if (index !== -1) {
-                            this.result[index]["data"][subSubQueryKey] = result;
-                            this.subSubQueryLoadedList[index][subSubQueryKey] =
-                              true;
+                            this.result[index]["data"][subQueryKeyName] =
+                              result;
+                            this.subQueryLoadedList[index][subQueryKey] = true;
                             checkUpdate();
                           }
                         },
                         () => {}
                       );
-                  } else {
-                    // TODO
-                    throw new Error("!unimplemented");
+                  } else if (subQueryRef instanceof DocumentReference) {
+                    queryListeners[subQueryKey] =
+                      new GraphDocumentQueryListener(
+                        subQueryRef,
+                        subQuery,
+                        (result: any) => {
+                          const index = this.result.findIndex(
+                            (res) => res.ref.path === docChange.doc.ref.path
+                          );
+                          if (index !== -1) {
+                            this.result[index]["data"][subQueryKeyName] =
+                              result;
+                            this.subQueryLoadedList[index][subQueryKey] = true;
+                            checkUpdate();
+                          }
+                        },
+                        () => {}
+                      );
                   }
                   break;
                 }
                 case "extension": {
                   // 拡張キー
-                  console.log("extension", subSubQuery);
-                  subQueryListeners[subSubQueryKey] =
-                    new GraphCollectionQueryListener(
-                      subSubQuery[0],
-                      subSubQuery[1],
-                      (result: any) => {
-                        const index = this.result.findIndex(
-                          (res) => res.ref.path === docChange.doc.ref.path
-                        );
-                        if (index !== -1) {
-                          this.result[index]["data"][subSubQueryKey] = result;
-                          this.subSubQueryLoadedList[index][subSubQueryKey] =
-                            true;
-                          checkUpdate();
-                        }
-                      },
-                      () => {}
-                    );
+                  const extensionRef = subQuery[0];
+                  const extensionQuery = subQuery[1];
+
+                  if (extensionRef instanceof Query) {
+                    console.log("extension", subQuery);
+                    queryListeners[subQueryKey] =
+                      new GraphCollectionQueryListener(
+                        extensionRef,
+                        extensionQuery,
+                        (result: any) => {
+                          const index = this.result.findIndex(
+                            (res) => res.ref.path === docChange.doc.ref.path
+                          );
+                          if (index !== -1) {
+                            this.result[index]["data"][subQueryKey] = result;
+                            this.subQueryLoadedList[index][subQueryKey] = true;
+                            checkUpdate();
+                          }
+                        },
+                        () => {}
+                      );
+                  } else if (extensionRef instanceof DocumentReference) {
+                    console.log("extension", subQuery);
+                    queryListeners[subQueryKey] =
+                      new GraphDocumentQueryListener(
+                        extensionRef,
+                        extensionQuery,
+                        (result: any) => {
+                          const index = this.result.findIndex(
+                            (res) => res.ref.path === docChange.doc.ref.path
+                          );
+                          if (index !== -1) {
+                            this.result[index]["data"][subQueryKey] = result;
+                            this.subQueryLoadedList[index][subQueryKey] = true;
+                            checkUpdate();
+                          }
+                        },
+                        () => {}
+                      );
+                  }
+
                   break;
                 }
               }
             }
-            this.subQueryListenersCollection[docChange.doc.ref.path] =
-              subQueryListeners;
+            this.queryListenersCollection[docChange.doc.ref.path] =
+              queryListeners;
             break;
           }
           case "removed":
@@ -437,8 +697,8 @@ class GraphCollectionQueryListener {
 }
 
 type GraphQueryListener =
-  //| GraphDocumentQueryListener
-  GraphCollectionQueryListener;
+  | GraphDocumentQueryListener
+  | GraphCollectionQueryListener;
 
 export function useQuery<
   Ref extends AnyReference,

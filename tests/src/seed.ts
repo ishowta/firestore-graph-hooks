@@ -56,7 +56,7 @@ export const generateSeed = async () => {
                 range(3).map(async (l) => {
                   const todoRef = await addDoc(getTodos(todoListRef), {
                     createdAt: serverTimestamp(),
-                    title: `${l}th todoList`,
+                    title: `${l}th todo`,
                     scheduledTime: l * 30 * 60,
                   });
                   if (j === 0 && k === 0 && l === 0) {
