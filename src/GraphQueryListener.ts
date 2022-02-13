@@ -12,10 +12,8 @@ import {
 } from "./types";
 import { makeSubQuery } from "./converter";
 import { GraphListener, makeGraphListener } from "./GraphListener";
-import { getLogger, Logger } from "loglevel";
+import { Logger } from "loglevel";
 import { getObjectLogger } from "./utils";
-
-const logger = getLogger("GraphQueryListener");
 
 export class GraphQueryListener {
   currentSnapshot: GraphQueryDocumentSnapshot<any>;

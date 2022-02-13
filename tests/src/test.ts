@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
-import { field, useQuery } from "./lib/useQuery";
 import { getKanbans, getProjects, getTodoLists, getUsers } from "./schema";
 import loglevel, { getLogger } from "loglevel";
 import { apply, reg } from "loglevel-plugin-prefix";
+import { field, useQuery } from "firestore-graph-hooks/src/useQuery";
 
 loglevel.setDefaultLevel("DEBUG");
 reg(loglevel);

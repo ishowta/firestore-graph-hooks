@@ -6,7 +6,7 @@ import {
   refEqual,
 } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Expand } from "../helper";
+import { Expand } from "./utils";
 import { GraphListener, makeGraphListener } from "./GraphListener";
 import {
   AnyReference,
@@ -27,7 +27,7 @@ apply(loglevel, {
 const logger = getLogger("useQuery");
 
 // ! old and not work
-function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
+export function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
   _query: Q
 ): [Expand<JoinedDataInner<{}, Q>> | undefined, boolean, Error | undefined] {
   const [value, setValue] = useState<Expand<JoinedDataInner<{}, Q>>>();

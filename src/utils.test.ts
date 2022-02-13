@@ -1,4 +1,7 @@
-import { assertNotType, assertType, Equal } from "./helper";
+import { PickOptional } from "./utils";
+import { assertNotType, assertType, Equal } from "./utils";
+
+assertType<Equal<PickOptional<{ a?: string; b: number }>, { a: string }>>();
 
 assertNotType<Equal<number, string>>();
 assertNotType<Equal<any, string>>();

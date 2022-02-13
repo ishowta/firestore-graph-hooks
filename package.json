@@ -1,5 +1,5 @@
 {
-  "name": "firestore-join-hooks",
+  "name": "firestore-graph-hooks",
   "version": "1.0.0",
   "main": "index.js",
   "repository": "git@github.com:ishowta/firestore-join-hooks.git",
@@ -7,9 +7,13 @@
   "license": "MIT",
   "dependencies": {
     "firebase": "^9.6.5",
+    "lodash-es": "^4.17.21",
+    "loglevel": "^1.8.0",
+    "loglevel-plugin-prefix": "^0.8.4",
     "typescript": "^4.5.5"
   },
   "devDependencies": {
+    "@types/lodash-es": "^4.17.6",
     "@types/react": "^17.0.38",
     "react": "^17.0.2"
   }

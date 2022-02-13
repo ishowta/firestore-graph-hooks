@@ -7,8 +7,7 @@ import {
   Query,
   SnapshotMetadata,
 } from "firebase/firestore";
-import { PickOptional, SelectiveOptional } from "./utils";
-import { Expand } from "../helper";
+import { PickOptional, SelectiveOptional, Expand } from "./utils";
 
 export type GraphQueryDocumentSnapshot<T extends DocumentData> = {
   data: T;
@@ -40,10 +39,8 @@ export type CollectionMetadata<T> = {
   __snapshot__: QuerySnapshot<T>;
 };
 
-export type WithMetadata<T extends DocumentData> = GraphDocumentSnapshot<T>;
-
 export type WithCollectionMetadata<T extends DocumentData> =
-  CollectionMetadata<T> & WithMetadata<T>[];
+  CollectionMetadata<T> & GraphDocumentSnapshot<T>[];
 
 export type AnyReference = DocumentReference | Query;
 type AnySnapshot = DocumentSnapshot | QuerySnapshot;
@@ -86,7 +83,7 @@ export type GraphQuery<T extends DocumentData> =
       [K in string]: unknown | [AnyReference, unknown];
     })
   // ドキュメントを引数にとってクエリを返す関数
-  | ((data: WithMetadata<T>) => GraphQuery<T>);
+  | ((data: GraphDocumentSnapshot<T>) => GraphQuery<T>);
 
 type GraphQueryQueryType<T, Q extends GraphQuery<T>> = Q extends (
   ...args: any
@@ -153,14 +150,15 @@ export type JoinedData<
 > = R extends DocumentReference<infer U>
   ? Q extends GraphQuery<U>
     ? {} extends Omit<JoinedDataInner<U, Q>, keyof U>
-      ? WithMetadata<U>
-      : WithMetadata<U> & Expand<Omit<JoinedDataInner<U, Q>, keyof U>>
+      ? GraphDocumentSnapshot<U>
+      : GraphDocumentSnapshot<U> & Expand<Omit<JoinedDataInner<U, Q>, keyof U>>
     : never
   : R extends CollectionReference<infer U>
   ? Q extends GraphQuery<U>
     ? {} extends Omit<JoinedDataInner<U, Q>, keyof U>
       ? WithCollectionMetadata<U>
-      : (WithMetadata<U> & Expand<Omit<JoinedDataInner<U, Q>, keyof U>>)[] &
+      : (GraphQueryDocumentSnapshot<U> &
+          Expand<Omit<JoinedDataInner<U, Q>, keyof U>>)[] &
           CollectionMetadata<U>
     : never
   : never;

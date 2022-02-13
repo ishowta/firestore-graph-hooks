@@ -1,13 +1,14 @@
 import {
   CollectionMetadata,
-  DocumentMetadata,
+  GraphDocumentSnapshot,
+  WithCollectionMetadata,
+} from "firestore-graph-hooks/src/types";
+import {
   field,
   useQuery,
   useRootQuery,
-  WithCollectionMetadata,
-  WithMetadata,
-} from "./lib/useQuery";
-import { assertType, Equal } from "./helper";
+} from "firestore-graph-hooks/src/useQuery";
+import { assertType, Equal } from "firestore-graph-hooks/src/utils";
 import {
   getKanbans,
   getProjects,
@@ -24,10 +25,10 @@ const types = () => {
   let [projects] = useQuery(getProjects(), (project) => ({
     ownerRef: (_user) => ({
       nowPlayingRef: (todo) => ({
-        extraOnlyTestField: field(todo.__ref__, {}),
+        extraOnlyTestField: field(todo.ref, {}),
       }),
     }),
-    kanbans: field(getKanbans(project.__ref__), {
+    kanbans: field(getKanbans(project.ref), {
       nextRef: {},
     }),
   }));
@@ -36,6 +37,10 @@ const types = () => {
     users: field(getUsers(), {}),
     projects: field(getProjects(), {}),
   });
+
+  let expected: ExpectProjectsType = {} as any;
+  projects = expected;
+  expected = projects;
 
   return [projects, query2] as const;
 };
@@ -47,21 +52,17 @@ type ManuelaKanban = ManuelaProjects[number]["kanbans"][number];
 type Query2ResultType = NonNullable<ReturnType<typeof types>[1]>;
 
 type ExpectProjectsType = CollectionMetadata<Project> &
-  (DocumentMetadata<Project> &
-    Project & {
-      owner: DocumentMetadata<User> &
-        User & {
-          nowPlaying: DocumentMetadata<TODO> &
-            TODO & {
-              extraOnlyTestField: DocumentMetadata<TODO> & TODO;
-            };
-        };
-      kanbans: CollectionMetadata<Kanban> &
-        (DocumentMetadata<Kanban> &
-          Kanban & {
-            next: (DocumentMetadata<Kanban> & Kanban) | null;
-          })[];
-    })[];
+  (GraphDocumentSnapshot<Project> & {
+    owner: GraphDocumentSnapshot<User> & {
+      nowPlaying: GraphDocumentSnapshot<TODO> & {
+        extraOnlyTestField: GraphDocumentSnapshot<TODO>;
+      };
+    };
+    kanbans: CollectionMetadata<Kanban> &
+      (GraphDocumentSnapshot<Kanban> & {
+        next: GraphDocumentSnapshot<Kanban> | null;
+      })[];
+  })[];
 
 type ExpectQuery2Type = {
   users: WithCollectionMetadata<User>;
@@ -73,14 +74,11 @@ assertType<Equal<Query2ResultType, ExpectQuery2Type>>();
 assertType<
   Equal<
     ManuelaKanban,
-    WithMetadata<Kanban> & {
-      next: WithMetadata<Kanban> | null;
+    GraphDocumentSnapshot<Kanban> & {
+      next: GraphDocumentSnapshot<Kanban> | null;
     }
   >
 >();
-// let expected: ExpectProjectsType = {} as any;
-// projects = expected;
-// expected = projects;
 
 // query result <: original document
 assertType<ManuelaProjects extends Project[] ? true : false>();

@@ -12,9 +12,7 @@ import {
 } from "./converter";
 import { getObjectLogger, insert } from "./utils";
 import { GraphQueryListener } from "./GraphQueryListener";
-import { getLogger, Logger } from "loglevel";
-
-const logger = getLogger("GraphListener");
+import { Logger } from "loglevel";
 
 export interface GraphListener {
   ref: any;
