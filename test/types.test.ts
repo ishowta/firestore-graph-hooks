@@ -11,9 +11,13 @@ import {
 import { field, useQuery, useRootQuery } from '../src/useQuery';
 import { assertType, Equal } from '../src/utils';
 import {
+  getKanbanOrder,
   getKanbans,
   getProjects,
+  getTODOListOrder,
   getTodoLists,
+  getTODOOrder,
+  getTodos,
   getUsers,
   Kanban,
   Project,
@@ -38,14 +42,30 @@ const types = () => {
     projects: field(getProjects(), {}),
   });
 
+  let [q3] = useQuery(getProjects(), (project) => ({
+    kanbanOrder: field(getKanbanOrder(project.ref), {}),
+    kanbans: field(getKanbans(project.ref), (kanban) => ({
+      todoListOrder: field(getTODOListOrder(kanban.ref), {}),
+      todoLists: field(getTodoLists(kanban.ref), (todoList) => ({
+        todoOrder: field(getTODOOrder(todoList.ref), {}),
+        todos: field(getTodos(todoList.ref), {}),
+      })),
+    })),
+  }));
+
   let expected: ExpectProjectsType = {} as any;
   projects = expected;
   expected = projects;
 
   let raw: GraphQueryDocumentSnapshot<Project>[] = projects;
 
-  return [projects, query2] as const;
+  return [projects, query2, q3] as const;
 };
+
+export type Q3Project = NonNullable<ReturnType<typeof types>[2]>[number];
+export type Q3Kanban = Q3Project['data']['kanbans'][number];
+export type Q3TODOList = Q3Kanban['data']['todoLists'][number];
+export type Q3TODO = Q3TODOList['data']['todos'][number];
 
 type ManuelaProjects = NonNullable<ReturnType<typeof types>[0]>;
 type ManuelaOwner = ManuelaProjects[number]['data']['owner'];

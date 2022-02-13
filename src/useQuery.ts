@@ -1,18 +1,10 @@
-import {
-  DocumentReference,
-  FirestoreError,
-  Query,
-  queryEqual,
-  refEqual,
-} from 'firebase/firestore';
+import { FirestoreError } from 'firebase/firestore';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Expand } from './utils';
-import { GraphListener, makeGraphListener } from './GraphListener';
 import { GraphQueryListener } from './GraphQueryListener';
 import {
   AnyReference,
   GraphQuery,
-  GraphQueryDocumentSnapshot,
   JoinedData,
   JoinedDataInner,
   RefToDoc,
@@ -28,7 +20,7 @@ apply(loglevel, {
 });
 const logger = getLogger('useQuery');
 
-export function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
+export function useRootQuery<Q extends GraphQuery<{}>>(
   query: Q
 ): [Expand<JoinedDataInner<{}, Q>> | undefined, boolean, Error | undefined] {
   const [value, setValue] = useState<Expand<JoinedDataInner<{}, Q>>>();

@@ -125,7 +125,11 @@ export type JoinedDataInner<
       keyof T
     >]: GraphQueryQueryType<T, Q>[K] extends [infer Ref, infer UQuery]
       ? Ref extends AnyReference
-        ? Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
+        ? UQuery extends Function
+          ? UQuery extends GraphQuery<RefToDoc<Ref>>
+            ? JoinedData<Ref, UQuery>
+            : never
+          : Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
           ? JoinedData<Ref, Required<UQuery>>
           : never
         : never
