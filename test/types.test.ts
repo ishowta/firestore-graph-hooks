@@ -1,6 +1,8 @@
+import { Firestore } from 'firebase/firestore';
 import {
   CollectionMetadata,
   GraphDocumentSnapshot,
+  GraphQueryDocumentSnapshot,
   WithCollectionMetadata,
 } from '../src/types';
 import { field, useQuery, useRootQuery } from '../src/useQuery';
@@ -18,46 +20,53 @@ import {
 } from './schema';
 
 const types = () => {
-  let [projects] = useQuery(getProjects(), (project) => ({
+  let firestore: Firestore = {} as any;
+  let [projects] = useQuery(getProjects(firestore), (project) => ({
     ownerRef: (_user) => ({
       nowPlayingRef: (todo) => ({
         extraOnlyTestField: field(todo.ref, {}),
       }),
     }),
-    kanbans: field(getKanbans(project.ref), {
-      nextRef: {},
-    }),
+    kanbans: field(getKanbans(project.ref), {}),
   }));
 
   let [query2] = useRootQuery({
-    users: field(getUsers(), {}),
-    projects: field(getProjects(), {}),
+    users: field(getUsers(firestore), {}),
+    projects: field(getProjects(firestore), {}),
   });
 
   let expected: ExpectProjectsType = {} as any;
   projects = expected;
   expected = projects;
 
+  let raw: GraphQueryDocumentSnapshot<Project>[] = projects;
+
   return [projects, query2] as const;
 };
 
 type ManuelaProjects = NonNullable<ReturnType<typeof types>[0]>;
-type ManuelaOwner = ManuelaProjects[number]['owner'];
-type ManuelaKanban = ManuelaProjects[number]['kanbans'][number];
+type ManuelaOwner = ManuelaProjects[number]['data']['owner'];
+type ManuelaKanban = ManuelaProjects[number]['data']['kanbans'][number];
 
 type Query2ResultType = NonNullable<ReturnType<typeof types>[1]>;
 
 type ExpectProjectsType = CollectionMetadata<Project> &
-  (GraphDocumentSnapshot<Project> & {
-    owner: GraphDocumentSnapshot<User> & {
-      nowPlaying: GraphDocumentSnapshot<TODO> & {
-        extraOnlyTestField: GraphDocumentSnapshot<TODO>;
+  (GraphQueryDocumentSnapshot<Project> & {
+    data: {
+      owner: GraphDocumentSnapshot<User> & {
+        data: {
+          nowPlaying: GraphDocumentSnapshot<TODO> & {
+            data: {
+              extraOnlyTestField: GraphDocumentSnapshot<TODO>;
+            };
+          };
+        };
       };
+      kanbans: CollectionMetadata<Kanban> &
+        (GraphQueryDocumentSnapshot<Kanban> & {
+          data: {};
+        })[];
     };
-    kanbans: CollectionMetadata<Kanban> &
-      (GraphDocumentSnapshot<Kanban> & {
-        next: GraphDocumentSnapshot<Kanban> | null;
-      })[];
   })[];
 
 type ExpectQuery2Type = {
@@ -65,21 +74,23 @@ type ExpectQuery2Type = {
   projects: WithCollectionMetadata<Project>;
 };
 
-assertType<Equal<ManuelaProjects, ExpectProjectsType>>();
-assertType<Equal<Query2ResultType, ExpectQuery2Type>>();
-assertType<
-  Equal<
-    ManuelaKanban,
-    GraphDocumentSnapshot<Kanban> & {
-      next: GraphDocumentSnapshot<Kanban> | null;
-    }
-  >
->();
+test('useQuery return type', () => {
+  assertType<Equal<ManuelaProjects, ExpectProjectsType>>();
+  assertType<Equal<Query2ResultType, ExpectQuery2Type>>();
+  assertType<Equal<ManuelaKanban, GraphQueryDocumentSnapshot<Kanban>>>();
+});
 
-// query result <: original document
-assertType<ManuelaProjects extends Project[] ? true : false>();
-assertType<ManuelaProjects[number]['owner'] extends User ? true : false>();
-assertType<
-  ManuelaProjects[number]['kanbans'] extends Kanban[] ? true : false
->();
-// let _raw: Project[] = projects;
+test('useQuery return type subtyping', () => {
+  // query result <: original document
+  assertType<
+    ManuelaProjects extends GraphQueryDocumentSnapshot<Project>[] ? true : false
+  >();
+  assertType<
+    ManuelaProjects[number]['data']['owner']['data'] extends User ? true : false
+  >();
+  assertType<
+    ManuelaProjects[number]['data']['kanbans'] extends GraphQueryDocumentSnapshot<Kanban>[]
+      ? true
+      : false
+  >();
+});
