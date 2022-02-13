@@ -30,3 +30,10 @@ jobs:
 
       - name: Build
         run: yarn build
+
+      - name: Release
+        if: matrix.node == '16.x' && matrix.os == ubuntu-latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: yarn semantic-release

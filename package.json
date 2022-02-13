@@ -1,6 +1,6 @@
 {
   "name": "firestore-graph-hooks",
-  "version": "0.1.0",
+  "version": "0.0.0-development",
   "license": "MIT",
   "author": "ishowta",
   "main": "dist/index.js",
@@ -19,7 +19,8 @@
     "start": "dts watch",
     "emulator": "firebase emulators:start --project demo-firebase-graph-hooks",
     "test": "firebase emulators:exec --project demo-firebase-graph-hooks \"dts test --passWithNoTests\"",
-    "test:ci": "firebase emulators:exec --project demo-firebase-graph-hooks \"dts test --passWithNoTests --ci --coverage --maxWorkers=2\""
+    "test:ci": "firebase emulators:exec --project demo-firebase-graph-hooks \"dts test --passWithNoTests --ci --coverage --maxWorkers=2\"",
+    "semantic-release": "semantic-release"
   },
   "husky": {
     "hooks": {
@@ -60,6 +61,8 @@
   "devDependencies": {
     "@firebase/rules-unit-testing": "^2.0.2",
     "@nodeguy/channel": "^1.0.1",
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/git": "^10.0.1",
     "@size-limit/preset-small-lib": "^7.0.8",
     "@testing-library/react-hooks": "^7.0.2",
     "@tsconfig/create-react-app": "^1.0.2",
@@ -76,9 +79,24 @@
     "lodash": "^4.17.21",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "semantic-release": "^19.0.2",
     "size-limit": "^7.0.8",
     "traverse": "^0.6.6",
     "tslib": "^2.3.1",
     "typescript": "^4.5.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ishowta/firestore-join-hooks.git"
+  },
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      "@semantic-release/git"
+    ]
   }
 }
