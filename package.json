@@ -18,7 +18,8 @@
     "size": "size-limit",
     "start": "dts watch",
     "emulator": "firebase emulators:start --project demo-firebase-graph-hooks",
-    "test": "firebase emulators:exec --project demo-firebase-graph-hooks \"dts test --passWithNoTests\""
+    "test": "firebase emulators:exec --project demo-firebase-graph-hooks \"dts test --passWithNoTests\"",
+    "test:ci": "firebase emulators:exec --project demo-firebase-graph-hooks \"dts test --passWithNoTests --ci --coverage --maxWorkers=2\""
   },
   "husky": {
     "hooks": {
