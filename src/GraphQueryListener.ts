@@ -29,7 +29,7 @@ export class GraphQueryListener {
     queryFactory: GraphQuery<any>,
     handleUpdate: (result: any) => void
   ) {
-    this.logger = getObjectLogger(this, snapshot.ref.path);
+    this.logger = getObjectLogger(this, snapshot.ref?.path);
     this.currentSnapshot = snapshot;
     this.queryFactory = queryFactory;
     this.subQueryListeners = {};
@@ -55,7 +55,7 @@ export class GraphQueryListener {
     this.onUpdate();
   }
 
-  onUpdate() {
+  private onUpdate() {
     this.logger.debug('onUpdate', this.result, this.subQueryListeners);
     this.logger.debug(
       `${
@@ -76,13 +76,13 @@ export class GraphQueryListener {
     }
   }
 
-  makeQuery(snapshot: GraphDocumentSnapshot<any>) {
+  private makeQuery(snapshot: GraphDocumentSnapshot<any>) {
     return typeof this.queryFactory === 'function'
       ? this.queryFactory(snapshot)
       : this.queryFactory;
   }
 
-  createSubQueryListener(
+  private createSubQueryListener(
     snapshot: GraphQueryDocumentSnapshot<any>,
     subQueryKey: string,
     subQueryFactory: GraphQuery<any>
@@ -137,7 +137,7 @@ export class GraphQueryListener {
     );
   }
 
-  updateSubQueryListener(
+  private updateSubQueryListener(
     subQueryKey: string,
     prevSnapshot: GraphQueryDocumentSnapshot<any>,
     prevSubQueryFactory: any,

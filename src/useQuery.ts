@@ -8,9 +8,11 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Expand } from './utils';
 import { GraphListener, makeGraphListener } from './GraphListener';
+import { GraphQueryListener } from './GraphQueryListener';
 import {
   AnyReference,
   GraphQuery,
+  GraphQueryDocumentSnapshot,
   JoinedData,
   JoinedDataInner,
   RefToDoc,
@@ -28,33 +30,34 @@ const logger = getLogger('useQuery');
 
 // ! old and not work
 export function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
-  _query: Q
+  query: Q
 ): [Expand<JoinedDataInner<{}, Q>> | undefined, boolean, Error | undefined] {
   const [value, setValue] = useState<Expand<JoinedDataInner<{}, Q>>>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestoreError>();
+  const rootListener = useRef<GraphQueryListener>();
 
   useEffect(() => {
-    const query: any = _query;
-    const result: any = {};
-    const allKey: string[] = Object.keys(query);
-    const allListener: Record<string, any> = {};
-    for (const key of allKey) {
-      const subQuery = query[key];
-      allListener[key] = subQuery(
-        (subResult: any) => {
-          result[key] = subResult;
-          if (Object.keys(result).length === allKey.length) {
-            if (loading) setLoading(false);
-            setValue(result);
-          }
-        },
-        (error: FirestoreError) => {
-          setError(error);
+    rootListener.current = new GraphQueryListener(
+      { data: {} } as any,
+      query,
+      (result) => {
+        setValue(result.data);
+        if (loading) {
+          setLoading(false);
         }
-      );
-    }
+      }
+    );
+    return () => {
+      rootListener.current?.unsubscribe();
+    };
   }, []);
+
+  useEffect(() => {
+    if (rootListener.current) {
+      rootListener.current.updateQuery(query);
+    }
+  }, [query]);
 
   return [value, loading, error];
 }
