@@ -5,7 +5,6 @@ import {
   DocumentReference,
   Timestamp,
 } from "@firebase/firestore";
-import { ID } from "./lib/useQuery";
 import { firestore } from "./firebase";
 
 export type Second = number & {};

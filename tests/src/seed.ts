@@ -16,13 +16,6 @@ import {
   getUsers,
 } from "./schema";
 
-export const test = async () => {
-  const projectRef = doc(getProjects(), "2PGbvMg4N394Rx94hP0x");
-  await updateDoc(projectRef, {
-    testKanbanCollectionRef: getKanbans(projectRef),
-  });
-};
-
 export const generateSeed = async () => {
   const userRefs = await Promise.all(
     range(10).map((i) =>

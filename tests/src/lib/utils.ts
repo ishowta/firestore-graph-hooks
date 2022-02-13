@@ -1,5 +1,3 @@
-import { Project } from "../schema";
-
 export type PickOptional<T> = {
   [K in keyof T as {} extends Pick<T, K> ? K : never]-?: T[K];
 };
@@ -9,4 +7,9 @@ export type SelectiveOptional<T, K extends string | number | symbol> = Partial<
 > &
   Omit<T, K & keyof T>;
 
-type A = PickOptional<Project>;
+export const insert = <T>(arr: T[], value: T, index: number): T[] => {
+  return arr
+    .slice(0, index)
+    .concat([value])
+    .concat(arr.slice(index, arr.length));
+};
