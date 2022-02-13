@@ -1,4 +1,4 @@
-import { getLogger } from "loglevel";
+import { getLogger } from 'loglevel';
 
 export type PickOptional<T> = {
   [K in keyof T as {} extends Pick<T, K> ? K : never]-?: T[K];
@@ -23,7 +23,9 @@ export type Equal<X, Y> = unknown extends X & Y
   ? EqualsFromCompiler<X, Y>
   : EqualsFromExtends<X, Y>;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function assertType<_T extends true>() {}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function assertNotType<_T extends false>() {}
 
 export type RequiredPrimitive<T> = T extends infer U | undefined ? U : T;

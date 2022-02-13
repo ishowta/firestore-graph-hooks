@@ -3,12 +3,12 @@ import {
   DocumentSnapshot,
   Query,
   QueryDocumentSnapshot,
-} from "firebase/firestore";
+} from 'firebase/firestore';
 import {
   GraphDocumentSnapshot,
   GraphQuery,
   GraphQueryDocumentSnapshot,
-} from "./types";
+} from './types';
 
 export const makeGraphQueryDocumentSnapshot = <T>(
   snapshot: QueryDocumentSnapshot<T>
@@ -49,24 +49,24 @@ export const makeSubQuery = (
   subQueryKey: string,
   subQueryFactory: any
 ): {
-  type: "external" | "extension";
+  type: 'external' | 'extension';
   ref: DocumentReference | Query;
   query: GraphQuery<any>;
 } => {
   // フィールドがオプショナルフィールドである場合、実態が無いので拡張フィールドなのか外部キーなのかの区別がつかない。
   // 仕方がないので拡張キーは`[ref, query]`の形式であるとしてそれで判断する
   // documentKeys.includes(subSubQueryKey) &&
-  const type = Array.isArray(subQueryFactory) ? "extension" : "external";
+  const type = Array.isArray(subQueryFactory) ? 'extension' : 'external';
   switch (type) {
-    case "external":
+    case 'external':
       return {
-        type: "external",
+        type: 'external',
         ref: snapshot.data[subQueryKey],
         query: subQueryFactory,
       };
-    case "extension":
+    case 'extension':
       return {
-        type: "extension",
+        type: 'extension',
         ref: subQueryFactory[0],
         query: subQueryFactory[1],
       };

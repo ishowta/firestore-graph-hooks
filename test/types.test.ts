@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react-hooks/rules-of-hooks */
+
 import { Firestore } from 'firebase/firestore';
 import {
   CollectionMetadata,

@@ -4,15 +4,15 @@ import {
   Query,
   onSnapshot,
   Unsubscribe,
-} from "firebase/firestore";
-import { GraphDocumentSnapshot, GraphQuery } from "./types";
+} from 'firebase/firestore';
+import { GraphDocumentSnapshot, GraphQuery } from './types';
 import {
   makeGraphDocumentSnapshot,
   makeGraphQueryDocumentSnapshot,
-} from "./converter";
-import { getObjectLogger, insert } from "./utils";
-import { GraphQueryListener } from "./GraphQueryListener";
-import { Logger } from "loglevel";
+} from './converter';
+import { getObjectLogger, insert } from './utils';
+import { GraphQueryListener } from './GraphQueryListener';
+import { Logger } from 'loglevel';
 
 export interface GraphListener {
   ref: any;
@@ -66,16 +66,16 @@ export class GraphDocumentListener implements GraphListener {
     this.queryListener = undefined;
 
     const onUpdate = (result: any) => {
-      this.logger.debug("onUpdate", result);
+      this.logger.debug('onUpdate', result);
       this.loading = false;
       handleUpdate(result);
     };
 
-    this.logger.debug("init", (ref as any).path);
+    this.logger.debug('init', (ref as any).path);
 
     this.listenerUnsubscriber = onSnapshot(ref, (rawSnapshot) => {
       const snapshot = makeGraphDocumentSnapshot(rawSnapshot);
-      this.logger.debug("onSnapshot", snapshot);
+      this.logger.debug('onSnapshot', snapshot);
       if (this.queryListener) {
         if (snapshot.exist) {
           if (this.queryListener.updateSnapshot(snapshot)) {
@@ -101,7 +101,7 @@ export class GraphDocumentListener implements GraphListener {
   }
 
   updateQuery(newQuery: any): boolean {
-    this.logger.debug("updateQuery", newQuery);
+    this.logger.debug('updateQuery', newQuery);
     this.query = newQuery;
     if (this.queryListener) {
       return this.queryListener.updateQuery(newQuery);
@@ -111,7 +111,7 @@ export class GraphDocumentListener implements GraphListener {
   }
 
   unsubscribe(): void {
-    this.logger.debug("unsubscribe");
+    this.logger.debug('unsubscribe');
     if (this.queryListener) {
       this.queryListener.unsubscribe();
     }
@@ -142,7 +142,7 @@ export class GraphCollectionListener implements GraphListener {
     this.queryListeners = {};
 
     const onUpdate = () => {
-      this.logger.debug("onUpdate");
+      this.logger.debug('onUpdate');
 
       // FIXME: initializedではなくloadingを見るべきでは?
       this.logger.debug(
@@ -159,7 +159,7 @@ export class GraphCollectionListener implements GraphListener {
           (queryListener) => queryListener.isQueryInitialized
         )
       ) {
-        this.logger.debug("updated");
+        this.logger.debug('updated');
         this.loading = false;
         handleUpdate(this.result);
       }
@@ -169,10 +169,10 @@ export class GraphCollectionListener implements GraphListener {
       path: string,
       result: GraphDocumentSnapshot<any>
     ) => {
-      this.logger.debug("onUpdateWithResult", path, result);
+      this.logger.debug('onUpdateWithResult', path, result);
       const docIndex = this.result.findIndex((res) => res.ref.path === path);
       if (docIndex === -1) {
-        this.logger.debug("path not found, skip update.", this.result, path);
+        this.logger.debug('path not found, skip update.', this.result, path);
         return;
       }
 
@@ -181,23 +181,23 @@ export class GraphCollectionListener implements GraphListener {
       onUpdate();
     };
 
-    this.logger.debug("init", (ref as any).path);
+    this.logger.debug('init', (ref as any).path);
 
     this.listenerUnsubscriber = onSnapshot(ref, (querySnapshot) => {
-      this.logger.debug("onSnapshot", querySnapshot);
+      this.logger.debug('onSnapshot', querySnapshot);
 
       // set result
       for (const docChange of querySnapshot.docChanges()) {
         const snapshot = makeGraphQueryDocumentSnapshot(docChange.doc);
         switch (docChange.type) {
-          case "added": {
+          case 'added': {
             this.result = insert(this.result, snapshot, docChange.newIndex);
             break;
           }
-          case "removed":
+          case 'removed':
             this.result.splice(docChange.oldIndex, 1);
             break;
-          case "modified":
+          case 'modified':
             if (docChange.oldIndex !== docChange.newIndex) {
               const temp = this.result.splice(docChange.oldIndex, 1);
               this.result = insert(this.result, temp[0], docChange.newIndex);
@@ -208,20 +208,20 @@ export class GraphCollectionListener implements GraphListener {
 
       // update snapshot
       for (const docChange of querySnapshot.docChanges()) {
-        this.logger.debug("docChange", docChange.type);
+        this.logger.debug('docChange', docChange.type);
         const snapshot = makeGraphQueryDocumentSnapshot(docChange.doc);
         switch (docChange.type) {
-          case "added": {
+          case 'added': {
             this.queryListeners[docChange.doc.ref.path] =
               new GraphQueryListener(snapshot, query, (result) =>
                 onUpdateWithResult(docChange.doc.ref.path, result)
               );
             break;
           }
-          case "removed":
+          case 'removed':
             this.queryListeners[docChange.doc.ref.path].unsubscribe();
             break;
-          case "modified":
+          case 'modified':
             if (
               this.queryListeners[docChange.doc.ref.path].updateSnapshot(
                 snapshot
@@ -237,7 +237,7 @@ export class GraphCollectionListener implements GraphListener {
   }
 
   updateQuery(newQuery: any): boolean {
-    this.logger.debug("updateQuery", newQuery);
+    this.logger.debug('updateQuery', newQuery);
     this.query = newQuery;
     if (this.queryListeners) {
       const hasUpdate = Object.values(this.queryListeners).some(
@@ -253,7 +253,7 @@ export class GraphCollectionListener implements GraphListener {
   }
 
   unsubscribe(): void {
-    this.logger.debug("unsubscribe");
+    this.logger.debug('unsubscribe');
     if (this.queryListeners) {
       Object.values(this.queryListeners).forEach((queryListener) =>
         queryListener.unsubscribe()

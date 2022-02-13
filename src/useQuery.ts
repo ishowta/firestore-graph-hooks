@@ -4,19 +4,19 @@ import {
   Query,
   queryEqual,
   refEqual,
-} from "firebase/firestore";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Expand } from "./utils";
-import { GraphListener, makeGraphListener } from "./GraphListener";
+} from 'firebase/firestore';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Expand } from './utils';
+import { GraphListener, makeGraphListener } from './GraphListener';
 import {
   AnyReference,
   GraphQuery,
   JoinedData,
   JoinedDataInner,
   RefToDoc,
-} from "./types";
-import loglevel, { getLogger } from "loglevel";
-import { apply, reg } from "loglevel-plugin-prefix";
+} from './types';
+import loglevel, { getLogger } from 'loglevel';
+import { apply, reg } from 'loglevel-plugin-prefix';
 
 reg(loglevel);
 apply(loglevel, {
@@ -24,7 +24,7 @@ apply(loglevel, {
     return `[${timestamp}] ${level} ${name}:`;
   },
 });
-const logger = getLogger("useQuery");
+const logger = getLogger('useQuery');
 
 // ! old and not work
 export function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
@@ -77,7 +77,7 @@ export function useQuery<
   const listener = useRef<GraphListener>();
 
   const createListener = () => {
-    logger.debug("createListener", ref, query);
+    logger.debug('createListener', ref, query);
     listener.current = makeGraphListener(
       ref,
       query,
@@ -91,7 +91,7 @@ export function useQuery<
   };
 
   useEffect(() => {
-    logger.debug("init listener");
+    logger.debug('init listener');
     createListener();
   }, []);
 
@@ -101,7 +101,7 @@ export function useQuery<
     if (listener.current == null) {
       return true;
     }
-    logger.debug("check update query");
+    logger.debug('check update query');
     const prevRef = currentRef.current;
     currentRef.current = ref;
     if (
@@ -113,20 +113,20 @@ export function useQuery<
         queryEqual(prevRef, ref))
     ) {
       // ref not changed
-      logger.debug("ref not changed");
+      logger.debug('ref not changed');
       if (listener.current.updateQuery(query)) {
         // query changed
-        logger.debug("query changed");
+        logger.debug('query changed');
         setResult(({ value }) => ({ value, loading: true }));
         return true;
       } else {
         // query not changed
-        logger.debug("query not changed");
+        logger.debug('query not changed');
         return loading;
       }
     } else {
       // ref changed
-      logger.debug("ref changed");
+      logger.debug('ref changed');
       listener.current.unsubscribe();
       createListener();
       return true;

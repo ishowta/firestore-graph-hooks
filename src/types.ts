@@ -2,7 +2,6 @@ import {
   CollectionReference,
   DocumentReference,
   QuerySnapshot,
-  DocumentSnapshot,
   DocumentData,
   Query,
   SnapshotMetadata,
@@ -43,7 +42,6 @@ export type WithCollectionMetadata<T extends DocumentData> =
   CollectionMetadata<T> & GraphQueryDocumentSnapshot<T>[];
 
 export type AnyReference = DocumentReference | Query;
-type AnySnapshot = DocumentSnapshot | QuerySnapshot;
 
 /**
  * ドキュメントのフィールドからリファレンスのフィールドのみを取り出す
