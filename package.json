@@ -1,6 +1,6 @@
 {
   "name": "firestore-graph-hooks",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "license": "MIT",
   "author": "ishowta",
   "main": "dist/index.js",
