@@ -29,7 +29,7 @@ export const App = () => {
 
 ## TODO
 
-- root query
+- add test and fix
 - nested document data
 - better error handling
 - typing internal code

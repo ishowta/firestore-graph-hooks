@@ -29,7 +29,7 @@ export class GraphQueryListener {
     queryFactory: GraphQuery<any>,
     handleUpdate: (result: any) => void
   ) {
-    this.logger = getObjectLogger(this, snapshot.ref?.path);
+    this.logger = getObjectLogger(this, snapshot.ref.path);
     this.currentSnapshot = snapshot;
     this.queryFactory = queryFactory;
     this.subQueryListeners = {};
@@ -72,6 +72,7 @@ export class GraphQueryListener {
     ) {
       this.logger.debug('updated');
       this.isQueryInitialized = true;
+      this.result.data = { ...this.result.data };
       this.handleUpdate(this.result);
     }
   }

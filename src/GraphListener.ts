@@ -227,7 +227,10 @@ export class GraphCollectionListener implements GraphListener {
                 snapshot
               )
             ) {
-              onUpdate();
+              onUpdateWithResult(
+                docChange.doc.ref.path,
+                this.queryListeners[docChange.doc.ref.path].result
+              );
             }
             break;
         }
