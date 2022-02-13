@@ -1,6 +1,6 @@
 # Firestore graph hooks
 
-Firebase client-side-join library like Graph Query
+Firebase client-side-join library like Graph QL
 
 ```tsx
 export const App = () => {
