@@ -12,6 +12,10 @@ import {
 } from "./types";
 import { makeSubQuery } from "./converter";
 import { GraphListener, makeGraphListener } from "./GraphListener";
+import { getLogger, Logger } from "loglevel";
+import { getObjectLogger } from "./utils";
+
+const logger = getLogger("GraphQueryListener");
 
 export class GraphQueryListener {
   currentSnapshot: GraphQueryDocumentSnapshot<any>;
@@ -20,13 +24,14 @@ export class GraphQueryListener {
   subQueryListeners: Record<string, GraphListener>;
   isQueryInitialized: boolean;
   handleUpdate: (result: any) => void;
+  logger: Logger;
 
   constructor(
     snapshot: GraphQueryDocumentSnapshot<any>,
     queryFactory: GraphQuery<any>,
     handleUpdate: (result: any) => void
   ) {
-    console.log("[GraphQueryListener]");
+    this.logger = getObjectLogger(this, snapshot.ref.path);
     this.currentSnapshot = snapshot;
     this.queryFactory = queryFactory;
     this.subQueryListeners = {};
@@ -34,20 +39,40 @@ export class GraphQueryListener {
     this.handleUpdate = handleUpdate;
 
     const query = this.makeQuery(snapshot);
+
+    this.logger.debug("init", snapshot, query);
+
     this.result = snapshot;
-    for (const [subQueryKey, subQuery] of Object.entries(query) as [any, any]) {
-      if (subQueryKey in snapshot.data) {
-        this.createSubQueryListener(snapshot, subQueryKey, subQuery);
-      }
+
+    if (Object.keys(query).length === 0) {
+      this.logger.debug("empty query, return.");
+      this.isQueryInitialized = true;
+      handleUpdate(this.result);
+      return;
     }
+
+    for (const [subQueryKey, subQuery] of Object.entries(query) as [any, any]) {
+      this.createSubQueryListener(snapshot, subQueryKey, subQuery);
+    }
+    this.onUpdate();
   }
 
   onUpdate() {
+    this.logger.debug("onUpdate", this.result, this.subQueryListeners);
+    this.logger.debug(
+      `${
+        Object.values(this.subQueryListeners).filter(
+          (subQueryListener) => !subQueryListener.loading
+        ).length
+      }/${Object.values(this.subQueryListeners).length} initialized`
+    );
+
     if (
       Object.values(this.subQueryListeners).every(
-        (subQueryListener) => subQueryListener.loading
+        (subQueryListener) => !subQueryListener.loading
       )
     ) {
+      this.logger.debug("updated");
       this.isQueryInitialized = true;
       this.handleUpdate(this.result);
     }
@@ -66,7 +91,13 @@ export class GraphQueryListener {
   ) {
     const subQuery = makeSubQuery(snapshot, subQueryKey, subQueryFactory);
 
-    console.log(subQuery);
+    this.logger.debug(
+      "createSubQueryListener",
+      snapshot,
+      subQueryKey,
+      subQuery
+    );
+
     if (subQuery.ref == null) {
       return;
     }
@@ -125,6 +156,16 @@ export class GraphQueryListener {
       subQueryKey,
       newSubQueryFactory
     );
+
+    this.logger.debug(
+      "updateSubQueryListener",
+      subQueryKey,
+      prevSnapshot,
+      prevSubQuery,
+      newSnapshot,
+      newSubQuery
+    );
+
     // compare ref
     if (prevSubQuery.type !== newSubQuery.type) {
       throw new Error("Unexpected Error. query type does not match");
@@ -132,9 +173,11 @@ export class GraphQueryListener {
 
     if (prevSubQuery.ref == null && newSubQuery.ref == null) {
       // ref not exist ever
+      this.logger.debug("ref not exist ever");
       return false;
     } else if (prevSubQuery.ref != null && newSubQuery.ref == null) {
       // ref removed
+      this.logger.debug("ref removed");
       this.subQueryListeners[subQueryKey].unsubscribe();
       if (this.result) {
         delete this.result.data[subQueryKey];
@@ -142,6 +185,7 @@ export class GraphQueryListener {
       return true;
     } else if (prevSubQuery.ref == null && newSubQuery.ref != null) {
       // ref created
+      this.logger.debug("ref created");
       this.createSubQueryListener(newSnapshot, subQueryKey, newSubQuery.query);
       return true;
     } else if (
@@ -151,6 +195,7 @@ export class GraphQueryListener {
         newSubQuery.ref instanceof DocumentReference)
     ) {
       // ref type changed
+      this.logger.debug("ref type changed");
       this.subQueryListeners[subQueryKey].unsubscribe();
       if (this.result) {
         delete this.result.data[subQueryKey];
@@ -166,6 +211,7 @@ export class GraphQueryListener {
         !queryEqual(prevSubQuery.ref, newSubQuery.ref))
     ) {
       // ref changed
+      this.logger.debug("ref changed");
       this.subQueryListeners[subQueryKey].unsubscribe();
       if (this.result) {
         delete this.result.data[subQueryKey];
@@ -174,15 +220,18 @@ export class GraphQueryListener {
       return true;
     } else {
       // ref not changed
+      this.logger.debug("ref not changed");
       return this.subQueryListeners[subQueryKey].updateQuery(newSubQuery.query);
     }
   }
 
   updateSnapshot(newSnapshot: GraphQueryDocumentSnapshot<any>) {
+    this.logger.debug("updateSnapshot", newSnapshot);
     return this.update(newSnapshot, this.queryFactory);
   }
 
   updateQuery(newQueryFactory: GraphQuery<any>) {
+    this.logger.debug("updateQuery", newQueryFactory);
     return this.update(this.currentSnapshot, newQueryFactory);
   }
 
@@ -190,13 +239,13 @@ export class GraphQueryListener {
     newSnapshot: GraphQueryDocumentSnapshot<any>,
     newQueryFactory: GraphQuery<any>
   ): boolean {
-    console.log("modified");
     let hasUpdate = false;
     const prevSnapshot = this.currentSnapshot;
     const prevQuery = this.makeQuery(this.currentSnapshot);
     this.currentSnapshot = newSnapshot;
     this.queryFactory = newQueryFactory;
     const newQuery = this.makeQuery(this.currentSnapshot);
+    this.logger.debug("update", prevSnapshot, newSnapshot, prevQuery, newQuery);
 
     // - calc snapshot diff
     //   - update result
@@ -210,6 +259,7 @@ export class GraphQueryListener {
         !(snapshotKey in newSnapshotKeys)
       ) {
         // key removed
+        this.logger.debug("key removed");
         hasUpdate = true;
         if (this.result && snapshotKey in this.result["data"]) {
           delete this.result["data"][snapshotKey];
@@ -224,6 +274,7 @@ export class GraphQueryListener {
         snapshotKey in newSnapshotKeys
       ) {
         // key created
+        this.logger.debug("key created");
         hasUpdate = true;
         if (this.result) {
           this.result["data"][snapshotKey] = newSnapshot.data[snapshotKey];
@@ -234,25 +285,30 @@ export class GraphQueryListener {
       }
       if (snapshotKey in prevSnapshotKeys && snapshotKey in newSnapshotKeys) {
         // key not changed
+        this.logger.debug("key not changed");
         if (this.result) {
           this.result["data"][snapshotKey] = newSnapshot.data[snapshotKey];
         }
         if (!(snapshotKey in prevQuery) && !(snapshotKey in newQuery)) {
           // subQuery not exist
+          this.logger.debug("subQuery not exist");
         }
         if (snapshotKey in prevQuery && !(snapshotKey in newQuery)) {
           // subQuery removed
+          this.logger.debug("subQuery removed");
           hasUpdate = true;
           this.subQueryListeners[snapshotKey].unsubscribe();
           delete this.subQueryListeners[snapshotKey];
         }
         if (!(snapshotKey in prevQuery) && snapshotKey in newQuery) {
           // subQuery created
+          this.logger.debug("subQuery created");
           hasUpdate = true;
           this.createSubQueryListener(newSnapshot, snapshotKey, newQuery);
         }
         if (snapshotKey in prevQuery && snapshotKey in newQuery) {
           // subQuery may modified
+          this.logger.debug("subQuery may modified");
           const subQueryHasUpdate = this.updateSubQueryListener(
             snapshotKey,
             prevSnapshot,
@@ -270,6 +326,7 @@ export class GraphQueryListener {
   }
 
   unsubscribe() {
+    this.logger.debug("unsubscribe");
     Object.values(this.subQueryListeners).forEach((queryListener) =>
       queryListener.unsubscribe()
     );

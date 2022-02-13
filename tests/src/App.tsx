@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { generateSeed, test } from "./seed";
+import { generateSeed } from "./seed";
 import { useTest } from "./test";
 
 function App() {
@@ -7,13 +7,7 @@ function App() {
   return (
     <div>
       Hello World!
-      <button
-        onClick={() => {
-          test();
-        }}
-      >
-        test
-      </button>
+      <button onClick={() => {}}>test</button>
     </div>
   );
 }

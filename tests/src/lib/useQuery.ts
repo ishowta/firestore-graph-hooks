@@ -15,6 +15,16 @@ import {
   JoinedDataInner,
   RefToDoc,
 } from "./types";
+import loglevel, { getLogger } from "loglevel";
+import { apply, reg } from "loglevel-plugin-prefix";
+
+reg(loglevel);
+apply(loglevel, {
+  format(level, name, timestamp) {
+    return `[${timestamp}] ${level} ${name}:`;
+  },
+});
+const logger = getLogger("useQuery");
 
 // ! old and not work
 function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
@@ -67,6 +77,7 @@ export function useQuery<
   const listener = useRef<GraphListener>();
 
   const createListener = () => {
+    logger.debug("createListener", ref, query);
     listener.current = makeGraphListener(
       ref,
       query,
@@ -80,12 +91,17 @@ export function useQuery<
   };
 
   useEffect(() => {
+    logger.debug("init listener");
     createListener();
   }, []);
 
-  // update query and determine loading state
+  // check update query and determine loading state
   const currentRef = useRef(ref);
   const immediateLoading = useMemo(() => {
+    if (listener.current == null) {
+      return true;
+    }
+    logger.debug("check update query");
     const prevRef = currentRef.current;
     currentRef.current = ref;
     if (
@@ -97,20 +113,22 @@ export function useQuery<
         queryEqual(prevRef, ref))
     ) {
       // ref not changed
-      if (listener.current?.updateQuery(query)) {
+      logger.debug("ref not changed");
+      if (listener.current.updateQuery(query)) {
         // query changed
+        logger.debug("query changed");
         setResult(({ value }) => ({ value, loading: true }));
         return true;
       } else {
         // query not changed
+        logger.debug("query not changed");
         return loading;
       }
     } else {
       // ref changed
-      if (listener.current) {
-        listener.current.unsubscribe();
-        createListener();
-      }
+      logger.debug("ref changed");
+      listener.current.unsubscribe();
+      createListener();
       return true;
     }
   }, [ref, query]);

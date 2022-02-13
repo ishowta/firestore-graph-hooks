@@ -1,10 +1,4 @@
-import {
-  addDoc,
-  doc,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
+import { addDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { range } from "lodash-es";
 import {
   getKanbanOrder,

@@ -10,8 +10,11 @@ import {
   makeGraphDocumentSnapshot,
   makeGraphQueryDocumentSnapshot,
 } from "./converter";
-import { insert } from "./utils";
+import { getObjectLogger, insert } from "./utils";
 import { GraphQueryListener } from "./GraphQueryListener";
+import { getLogger, Logger } from "loglevel";
+
+const logger = getLogger("GraphListener");
 
 export interface GraphListener {
   ref: any;
@@ -49,6 +52,7 @@ export class GraphDocumentListener implements GraphListener {
   queryListener: GraphQueryListener | undefined;
   loading: boolean;
   isSnapshotInitialized: boolean;
+  logger: Logger;
 
   constructor(
     ref: DocumentReference,
@@ -56,6 +60,7 @@ export class GraphDocumentListener implements GraphListener {
     handleUpdate: (result: any) => void,
     handleError: (error: FirestoreError) => void
   ) {
+    this.logger = getObjectLogger(this, ref.path);
     this.loading = true;
     this.isSnapshotInitialized = false;
     this.ref = ref;
@@ -63,13 +68,16 @@ export class GraphDocumentListener implements GraphListener {
     this.queryListener = undefined;
 
     const onUpdate = (result: any) => {
+      this.logger.debug("onUpdate", result);
       this.loading = false;
       handleUpdate(result);
     };
 
-    console.log(`set onSnapshot ${(ref as any).path}`);
+    this.logger.debug("init", (ref as any).path);
+
     this.listenerUnsubscriber = onSnapshot(ref, (rawSnapshot) => {
       const snapshot = makeGraphDocumentSnapshot(rawSnapshot);
+      this.logger.debug("onSnapshot", snapshot);
       if (this.queryListener) {
         if (snapshot.exist) {
           this.queryListener.updateSnapshot(snapshot);
@@ -93,19 +101,17 @@ export class GraphDocumentListener implements GraphListener {
   }
 
   updateQuery(newQuery: any): boolean {
+    this.logger.debug("updateQuery", newQuery);
     this.query = newQuery;
     if (this.queryListener) {
-      const hasUpdate = this.queryListener.updateQuery(newQuery);
-      if (hasUpdate) {
-        this.loading = true;
-      }
-      return hasUpdate;
+      return this.queryListener.updateQuery(newQuery);
     } else {
       return false;
     }
   }
 
   unsubscribe(): void {
+    this.logger.debug("unsubscribe");
     if (this.queryListener) {
       this.queryListener.unsubscribe();
     }
@@ -120,6 +126,7 @@ export class GraphCollectionListener implements GraphListener {
   queryListeners: Record<string, GraphQueryListener>;
   result: GraphDocumentSnapshot<any>[];
   loading: boolean;
+  logger: Logger;
 
   constructor(
     ref: Query,
@@ -127,43 +134,88 @@ export class GraphCollectionListener implements GraphListener {
     handleUpdate: (result: any) => void,
     handleError: (error: FirestoreError) => void
   ) {
+    this.logger = getObjectLogger(this, (ref as any).path);
     this.loading = true;
     this.ref = ref;
     this.query = query;
     this.result = [];
     this.queryListeners = {};
 
-    const onUpdate = (path: string, result: GraphDocumentSnapshot<any>) => {
-      const docIndex = this.result.findIndex((res) => res.ref.path === path);
-      if (docIndex === -1) {
-        return;
-      }
+    const onUpdate = () => {
+      this.logger.debug("onUpdate");
 
-      this.result[docIndex]["data"] = result;
+      // FIXME: initializedではなくloadingを見るべきでは?
+      this.logger.debug(
+        `${
+          Object.values(this.queryListeners).filter(
+            (queryListener) => queryListener.isQueryInitialized
+          ).length
+        }/${this.result.length} initialized`
+      );
 
       if (
+        Object.keys(this.queryListeners).length === this.result.length &&
         Object.values(this.queryListeners).every(
           (queryListener) => queryListener.isQueryInitialized
         )
       ) {
-        console.log("update", ref, query);
+        this.logger.debug("updated");
         this.loading = false;
         handleUpdate(this.result);
       }
     };
 
-    console.log(`set onSnapshot ${(ref as any).path}`);
+    const onUpdateWithResult = (
+      path: string,
+      result: GraphDocumentSnapshot<any>
+    ) => {
+      this.logger.debug("onUpdateWithResult", path, result);
+      const docIndex = this.result.findIndex((res) => res.ref.path === path);
+      if (docIndex === -1) {
+        this.logger.debug("path not found, skip update.", this.result, path);
+        return;
+      }
+
+      this.result[docIndex] = result;
+
+      onUpdate();
+    };
+
+    this.logger.debug("init", (ref as any).path);
+
     this.listenerUnsubscriber = onSnapshot(ref, (querySnapshot) => {
+      this.logger.debug("onSnapshot", querySnapshot);
+
+      // set result
       for (const docChange of querySnapshot.docChanges()) {
-        console.log(docChange.type);
+        const snapshot = makeGraphQueryDocumentSnapshot(docChange.doc);
+        switch (docChange.type) {
+          case "added": {
+            this.result = insert(this.result, snapshot, docChange.newIndex);
+            break;
+          }
+          case "removed":
+            this.result.splice(docChange.oldIndex, 1);
+            break;
+          case "modified":
+            if (docChange.oldIndex !== docChange.newIndex) {
+              const temp = this.result.splice(docChange.oldIndex, 1);
+              this.result = insert(this.result, temp[0], docChange.newIndex);
+            }
+            break;
+        }
+      }
+
+      // update snapshot
+      for (const docChange of querySnapshot.docChanges()) {
+        this.logger.debug("docChange", docChange.type);
         const snapshot = makeGraphQueryDocumentSnapshot(docChange.doc);
         switch (docChange.type) {
           case "added": {
             this.queryListeners[docChange.doc.ref.path] =
               new GraphQueryListener(snapshot, query, (result) =>
-                onUpdate(docChange.doc.ref.path, result)
+                onUpdateWithResult(docChange.doc.ref.path, result)
               );
-            this.result = insert(this.result, snapshot, docChange.newIndex);
             break;
           }
           case "removed":
@@ -176,10 +228,12 @@ export class GraphCollectionListener implements GraphListener {
             break;
         }
       }
+      onUpdate();
     });
   }
 
   updateQuery(newQuery: any): boolean {
+    this.logger.debug("updateQuery", newQuery);
     this.query = newQuery;
     if (this.queryListeners) {
       const hasUpdate = Object.values(this.queryListeners).some(
@@ -195,6 +249,7 @@ export class GraphCollectionListener implements GraphListener {
   }
 
   unsubscribe(): void {
+    this.logger.debug("unsubscribe");
     if (this.queryListeners) {
       Object.values(this.queryListeners).forEach((queryListener) =>
         queryListener.unsubscribe()
