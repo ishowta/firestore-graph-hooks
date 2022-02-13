@@ -80,7 +80,9 @@ export class GraphDocumentListener implements GraphListener {
       this.logger.debug("onSnapshot", snapshot);
       if (this.queryListener) {
         if (snapshot.exist) {
-          this.queryListener.updateSnapshot(snapshot);
+          if (this.queryListener.updateSnapshot(snapshot)) {
+            onUpdate(this.queryListener.result);
+          }
         } else {
           this.queryListener.unsubscribe();
         }
@@ -222,9 +224,13 @@ export class GraphCollectionListener implements GraphListener {
             this.queryListeners[docChange.doc.ref.path].unsubscribe();
             break;
           case "modified":
-            this.queryListeners[docChange.doc.ref.path].updateSnapshot(
-              snapshot
-            );
+            if (
+              this.queryListeners[docChange.doc.ref.path].updateSnapshot(
+                snapshot
+              )
+            ) {
+              onUpdate();
+            }
             break;
         }
       }

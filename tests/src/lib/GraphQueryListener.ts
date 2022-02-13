@@ -20,7 +20,7 @@ const logger = getLogger("GraphQueryListener");
 export class GraphQueryListener {
   currentSnapshot: GraphQueryDocumentSnapshot<any>;
   queryFactory: GraphQuery<any>;
-  result: GraphDocumentSnapshot<any> | undefined;
+  result: GraphDocumentSnapshot<any>;
   subQueryListeners: Record<string, GraphListener>;
   isQueryInitialized: boolean;
   handleUpdate: (result: any) => void;
@@ -226,20 +226,24 @@ export class GraphQueryListener {
   }
 
   updateSnapshot(newSnapshot: GraphQueryDocumentSnapshot<any>) {
-    this.logger.debug("updateSnapshot", newSnapshot);
-    return this.update(newSnapshot, this.queryFactory);
+    this.result = {
+      ...this.result,
+      ...newSnapshot,
+    };
+    this.logger.debug("updateSnapshot", newSnapshot, this.result);
+    return this.update(newSnapshot, this.queryFactory, true);
   }
 
   updateQuery(newQueryFactory: GraphQuery<any>) {
     this.logger.debug("updateQuery", newQueryFactory);
-    return this.update(this.currentSnapshot, newQueryFactory);
+    return this.update(this.currentSnapshot, newQueryFactory, false);
   }
 
-  update(
+  private update(
     newSnapshot: GraphQueryDocumentSnapshot<any>,
-    newQueryFactory: GraphQuery<any>
+    newQueryFactory: GraphQuery<any>,
+    hasUpdate: boolean
   ): boolean {
-    let hasUpdate = false;
     const prevSnapshot = this.currentSnapshot;
     const prevQuery = this.makeQuery(this.currentSnapshot);
     this.currentSnapshot = newSnapshot;
@@ -322,6 +326,7 @@ export class GraphQueryListener {
         }
       }
     }
+    this.logger.debug("hasUpdate: ", hasUpdate);
     return hasUpdate;
   }
 
