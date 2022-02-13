@@ -13,6 +13,7 @@ Firebase client-side-join library like Graph Query
 - better error handling
 - typing internal code
 - more strict types
+- snapshot option
 - fragment query
 - flat query result structure mode
 - no restriction reference field name mode

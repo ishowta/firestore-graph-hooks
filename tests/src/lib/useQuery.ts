@@ -11,10 +11,13 @@ import {
   SnapshotOptions,
   SnapshotMetadata,
   onSnapshot,
+  Unsubscribe,
+  refEqual,
 } from "firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PickOptional, SelectiveOptional } from "./helper";
 import { Expand } from "../helper";
+import { union } from "lodash-es";
 
 export type GraphQueryDocumentSnapshot<T extends DocumentData> = {
   data: T;
@@ -171,38 +174,6 @@ type JoinedData<
     : never
   : never;
 
-export function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
-  _query: Q
-): [Expand<JoinedDataInner<{}, Q>> | undefined, boolean, Error | undefined] {
-  const [value, setValue] = useState<Expand<JoinedDataInner<{}, Q>>>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<FirestoreError>();
-
-  useEffect(() => {
-    const query: any = _query;
-    const result: any = {};
-    const allKey: string[] = Object.keys(query);
-    const allListener: Record<string, any> = {};
-    for (const key of allKey) {
-      const subQuery = query[key];
-      allListener[key] = subQuery(
-        (subResult: any) => {
-          result[key] = subResult;
-          if (Object.keys(result).length === allKey.length) {
-            if (loading) setLoading(false);
-            setValue(result);
-          }
-        },
-        (error: FirestoreError) => {
-          setError(error);
-        }
-      );
-    }
-  }, []);
-
-  return [value, loading, error];
-}
-
 const makeGraphQueryDocumentSnapshot = <T>(
   snapshot: QueryDocumentSnapshot<T>
 ): GraphQueryDocumentSnapshot<T> => {
@@ -251,14 +222,340 @@ const detectQueryType = (key: string, query: any): "external" | "extension" => {
   return Array.isArray(query) ? "extension" : "external";
 };
 
-class GraphDocumentQueryListener {
-  ref: DocumentReference;
-  listener: any;
-  query: any;
-  queryListeners: Record<string, Record<string, GraphQueryListener>>;
+class GraphQueryListener {
+  currentSnapshot: GraphDocumentSnapshot<any>;
+  queryFactory: GraphQuery<any>;
   result: GraphDocumentSnapshot<any> | undefined;
+  subQueryListeners: Record<string, GraphListener>;
+  isQueryInitialized: boolean;
+  handleUpdate: (result: any) => void;
+
+  constructor(
+    snapshot: GraphDocumentSnapshot<any>,
+    queryFactory: GraphQuery<any>,
+    handleUpdate: (result: any) => void
+  ) {
+    this.currentSnapshot = snapshot;
+    this.queryFactory = queryFactory;
+    this.subQueryListeners = {};
+    this.isQueryInitialized = false;
+    this.handleUpdate = handleUpdate;
+
+    const query = this.makeQuery(snapshot);
+    this.result = snapshot;
+    for (const [subQueryKey, subQuery] of Object.entries(query) as [any, any]) {
+      if (subQueryKey in snapshot.data) {
+        this.createSubQueryListener(snapshot, subQueryKey, subQuery);
+      }
+    }
+  }
+
+  onUpdate() {
+    if (
+      Object.values(this.subQueryListeners).every(
+        (subQueryListener) => subQueryListener.loading
+      )
+    ) {
+      this.isQueryInitialized = true;
+      this.handleUpdate(this.result);
+    }
+  }
+
+  makeQuery(snapshot: GraphDocumentSnapshot<any>) {
+    return typeof this.queryFactory === "function"
+      ? this.queryFactory(snapshot)
+      : this.queryFactory;
+  }
+
+  createSubQueryListener(
+    snapshot: GraphDocumentSnapshot<any>,
+    subQueryKey: string,
+    subQuery: any
+  ) {
+    switch (detectQueryType(subQueryKey, subQuery)) {
+      case "external": {
+        const subQueryRef = snapshot.data[subQueryKey];
+        console.log("external", subQuery, subQueryRef);
+        if (subQueryRef == null) {
+          return;
+        }
+        if (
+          !(
+            subQueryRef instanceof DocumentReference ||
+            subQueryRef instanceof Query
+          )
+        ) {
+          throw new Error(`Unreachable. Expect ref, get ${subQueryRef}.`);
+        }
+        // 外部キー
+        const subQueryKeyName = (() => {
+          if ((subQueryKey as string).endsWith("Ref")) {
+            return (subQueryKey as string).substring(
+              0,
+              (subQueryKey as string).length - 3
+            );
+          } else {
+            throw new Error(
+              "Unexpected. field key without endsWith `Ref` is not supported"
+            );
+          }
+        })();
+
+        this.subQueryListeners[subQueryKey] = makeGraphListener(
+          subQueryRef,
+          subQuery,
+          (result: any) => {
+            this.result!["data"][subQueryKeyName] = result;
+            this.onUpdate();
+          },
+          () => {}
+        );
+
+        break;
+      }
+      case "extension": {
+        // 拡張キー
+        const extensionRef = subQuery[0];
+        const extensionQuery = subQuery[1];
+
+        console.log("extension", subQuery);
+
+        this.subQueryListeners[subQueryKey] = makeGraphListener(
+          extensionRef,
+          extensionQuery,
+          (result: any) => {
+            this.result!["data"][subQueryKey] = result;
+            this.onUpdate();
+          },
+          () => {}
+        );
+
+        break;
+      }
+    }
+  }
+
+  updateSubQueryListener(
+    subQueryKey: string,
+    prevSnapshot: GraphDocumentSnapshot<any>,
+    prevSubQueryFactory: any,
+    newSnapshot: GraphDocumentSnapshot<any>,
+    newSubQueryFactory: any
+  ): boolean {
+    // compare ref
+    if (
+      detectQueryType(subQueryKey, prevSubQueryFactory) !==
+      detectQueryType(subQueryKey, newSubQueryFactory)
+    ) {
+      throw new Error("Unexpected Error. query type does not match");
+    }
+
+    let prevSubQueryRef: DocumentReference | Query;
+    let prevSubQuery: any;
+    let newSubQueryRef: DocumentReference | Query;
+    let newSubQuery: any;
+
+    switch (detectQueryType(subQueryKey, newSubQueryFactory)) {
+      case "external": {
+        prevSubQueryRef = prevSnapshot.data[subQueryKey];
+        prevSubQuery = prevSubQueryFactory;
+        newSubQueryRef = newSnapshot.data[subQueryKey];
+        newSubQuery = newSubQueryFactory;
+        console.log("external", newSubQuery, newSubQueryRef);
+        break;
+      }
+      case "extension": {
+        prevSubQueryRef = prevSubQueryFactory[0];
+        prevSubQuery = prevSubQueryFactory[1];
+        newSubQueryRef = newSubQueryFactory[0];
+        newSubQuery = newSubQueryFactory[1];
+        console.log("extension", newSubQuery, newSubQueryRef);
+        break;
+      }
+    }
+
+    if (prevSubQueryRef == null && newSubQueryRef == null) {
+      // ref not exist ever
+      return false;
+    } else if (prevSubQueryRef != null && newSubQueryRef == null) {
+      // ref removed
+      this.subQueryListeners[subQueryKey].unsubscribe();
+      if (this.result) {
+        delete this.result.data[subQueryKey];
+      }
+      return true;
+    } else if (prevSubQueryRef == null && newSubQueryRef != null) {
+      // ref created
+      this.createSubQueryListener(newSnapshot, subQueryKey, newSubQuery);
+      return true;
+    } else if (
+      (prevSubQueryRef instanceof DocumentReference &&
+        newSubQueryRef instanceof Query) ||
+      (prevSubQueryRef instanceof Query &&
+        newSubQueryRef instanceof DocumentReference)
+    ) {
+      // ref type changed
+      this.subQueryListeners[subQueryKey].unsubscribe();
+      if (this.result) {
+        delete this.result.data[subQueryKey];
+      }
+      this.createSubQueryListener(newSnapshot, subQueryKey, newSubQuery);
+      return true;
+    } else if (
+      (prevSubQueryRef instanceof DocumentReference &&
+        newSubQueryRef instanceof DocumentReference &&
+        !refEqual(prevSubQueryRef, newSubQueryRef)) ||
+      (prevSubQueryRef instanceof Query &&
+        newSubQueryRef instanceof Query &&
+        !queryEqual(prevSubQueryRef, newSubQueryRef))
+    ) {
+      // ref changed
+      this.subQueryListeners[subQueryKey].unsubscribe();
+      if (this.result) {
+        delete this.result.data[subQueryKey];
+      }
+      this.createSubQueryListener(newSnapshot, subQueryKey, newSubQuery);
+      return true;
+    } else {
+      // ref not changed
+      return this.subQueryListeners[subQueryKey].updateQuery(newSubQuery);
+    }
+  }
+
+  updateSnapshot(newSnapshot: GraphDocumentSnapshot<any>) {
+    return this.update(newSnapshot, this.queryFactory);
+  }
+
+  updateQuery(newQueryFactory: GraphQuery<any>) {
+    return this.update(this.currentSnapshot, newQueryFactory);
+  }
+
+  update(
+    newSnapshot: GraphDocumentSnapshot<any>,
+    newQueryFactory: GraphQuery<any>
+  ): boolean {
+    console.log("modified");
+    let hasUpdate = false;
+    const prevSnapshot = this.currentSnapshot;
+    const prevQuery = this.makeQuery(this.currentSnapshot);
+    this.currentSnapshot = newSnapshot;
+    this.queryFactory = newQueryFactory;
+    const newQuery = this.makeQuery(this.currentSnapshot);
+
+    // - calc snapshot diff
+    //   - update result
+    //   - calc query diff for each snapshot diff
+    //     - update subQuery
+    const prevSnapshotKeys = Object.keys(prevSnapshot);
+    const newSnapshotKeys = Object.keys(newSnapshot);
+    for (const snapshotKey of union(prevSnapshotKeys, newSnapshotKeys)) {
+      if (
+        snapshotKey in prevSnapshotKeys &&
+        !(snapshotKey in newSnapshotKeys)
+      ) {
+        // key removed
+        hasUpdate = true;
+        if (this.result && snapshotKey in this.result["data"]) {
+          delete this.result["data"][snapshotKey];
+        }
+        if (this.subQueryListeners && snapshotKey in this.subQueryListeners) {
+          this.subQueryListeners[snapshotKey].unsubscribe();
+          delete this.subQueryListeners[snapshotKey];
+        }
+      }
+      if (
+        !(snapshotKey in prevSnapshotKeys) &&
+        snapshotKey in newSnapshotKeys
+      ) {
+        // key created
+        hasUpdate = true;
+        if (this.result) {
+          this.result["data"][snapshotKey] = newSnapshot.data[snapshotKey];
+        }
+        if (snapshotKey in newQuery) {
+          this.createSubQueryListener(newSnapshot, snapshotKey, newQuery);
+        }
+      }
+      if (snapshotKey in prevSnapshotKeys && snapshotKey in newSnapshotKeys) {
+        // key not changed
+        if (this.result) {
+          this.result["data"][snapshotKey] = newSnapshot.data[snapshotKey];
+        }
+        if (!(snapshotKey in prevQuery) && !(snapshotKey in newQuery)) {
+          // subQuery not exist
+        }
+        if (snapshotKey in prevQuery && !(snapshotKey in newQuery)) {
+          // subQuery removed
+          hasUpdate = true;
+          this.subQueryListeners[snapshotKey].unsubscribe();
+          delete this.subQueryListeners[snapshotKey];
+        }
+        if (!(snapshotKey in prevQuery) && snapshotKey in newQuery) {
+          // subQuery created
+          hasUpdate = true;
+          this.createSubQueryListener(newSnapshot, snapshotKey, newQuery);
+        }
+        if (snapshotKey in prevQuery && snapshotKey in newQuery) {
+          // subQuery may modified
+          const subQueryHasUpdate = this.updateSubQueryListener(
+            snapshotKey,
+            prevSnapshot,
+            prevQuery,
+            newSnapshot,
+            newQuery
+          );
+          if (subQueryHasUpdate) {
+            hasUpdate = true;
+          }
+        }
+      }
+    }
+    return hasUpdate;
+  }
+
+  unsubscribe() {
+    Object.values(this.subQueryListeners).forEach((queryListener) =>
+      queryListener.unsubscribe()
+    );
+  }
+}
+
+interface GraphListener {
+  ref: any;
+  query: any;
   loading: boolean;
-  subQueryLoaded: Record<string, boolean>;
+
+  /**
+   * クエリを投げ、更新があるかどうかを返す
+   */
+  updateQuery(newQuery: any): boolean;
+
+  /**
+   * サブクエリの購読を止める
+   */
+  unsubscribe(): void;
+}
+
+const makeGraphListener = (
+  ref: DocumentReference | Query,
+  query: any,
+  handleUpdate: (result: any) => void,
+  handleError: (error: FirestoreError) => void
+): GraphListener => {
+  if (ref instanceof Query) {
+    return new GraphCollectionListener(ref, query, handleUpdate, handleError);
+  } else {
+    return new GraphDocumentListener(ref, query, handleUpdate, handleError);
+  }
+};
+
+class GraphDocumentListener implements GraphListener {
+  ref: DocumentReference;
+  listenerUnsubscriber: Unsubscribe;
+  query: any;
+  queryListener: GraphQueryListener | undefined;
+  loading: boolean;
+  isSnapshotInitialized: boolean;
 
   constructor(
     ref: DocumentReference,
@@ -267,212 +564,69 @@ class GraphDocumentQueryListener {
     handleError: (error: FirestoreError) => void
   ) {
     this.loading = true;
+    this.isSnapshotInitialized = false;
     this.ref = ref;
     this.query = query;
-    this.queryListeners = {};
-    this.result = undefined;
-    this.subQueryLoaded = {};
+    this.queryListener = undefined;
 
-    const update = () => {
-      handleUpdate(this.result);
-    };
-
-    const checkUpdate = () => {
-      console.log("loadedlist", this.subQueryLoaded);
-      if (Object.values(this.subQueryLoaded).every((res) => res)) {
-        console.log("update", ref, query);
-        update();
-      }
+    const onUpdate = (result: any) => {
+      this.loading = false;
+      handleUpdate(result);
     };
 
     console.log(`set onSnapshot ${(ref as any).path}`);
-    let initialized = false;
-    this.listener = onSnapshot(ref, (snapshot) => {
-      const docChange = initialized
-        ? snapshot.exists()
-          ? ({
-              type: "modified",
-              doc: snapshot,
-            } as const)
-          : ({
-              type: "removed",
-              doc: snapshot,
-            } as const)
-        : snapshot.exists()
-        ? ({
-            type: "added",
-            doc: snapshot,
-          } as const)
-        : ({
-            type: "notExists",
-            doc: snapshot,
-          } as const);
-      initialized = true;
-      console.log(docChange.type);
-      switch (docChange.type) {
-        case "added": {
-          const graphDocumentSnapshot = makeGraphQueryDocumentSnapshot(
-            docChange.doc
-          );
-          const documentKeys = Object.keys(graphDocumentSnapshot.data);
-          const query =
-            typeof this.query === "function"
-              ? this.query(graphDocumentSnapshot)
-              : this.query;
-          this.result = graphDocumentSnapshot;
-          this.subQueryLoaded = {};
-          for (const [subSubQueryKey, subSubQuery] of Object.entries(query) as [
-            any,
-            any
-          ]) {
-            console.log(
-              "queryType",
-              detectQueryType(subSubQueryKey, subSubQuery),
-              subSubQueryKey,
-              subSubQuery
-            );
-            switch (detectQueryType(subSubQueryKey, subSubQuery)) {
-              case "external": {
-                const subQueryRef = graphDocumentSnapshot.data[subSubQueryKey];
-                if (subQueryRef != null) {
-                  this.subQueryLoaded[subSubQueryKey] = false;
-                }
-                break;
-              }
-              case "extension": {
-                this.subQueryLoaded[subSubQueryKey] = false;
-                break;
-              }
-            }
-          }
-          console.log("loadedList:=", this.subQueryLoaded);
-          const queryListeners: Record<string, GraphQueryListener> = {};
-          for (const [subQueryKey, subQuery] of Object.entries(query) as [
-            any,
-            any
-          ]) {
-            const subQueryRef = graphDocumentSnapshot.data[subQueryKey];
-            switch (detectQueryType(subQueryKey, subQuery)) {
-              case "external": {
-                console.log("external", subQuery, subQueryRef);
-                if (subQueryRef == null) {
-                  continue;
-                }
-                if (
-                  !(
-                    subQueryRef instanceof DocumentReference ||
-                    subQueryRef instanceof Query
-                  )
-                ) {
-                  throw new Error(
-                    `Unreachable. Expect ref, get ${subQueryRef}.`
-                  );
-                }
-                // 外部キー
-                const subQueryKeyName = (() => {
-                  if ((subQueryKey as string).endsWith("Ref")) {
-                    return (subQueryKey as string).substring(
-                      0,
-                      (subQueryKey as string).length - 3
-                    );
-                  } else {
-                    throw new Error(
-                      "Unexpected. field key without endsWith `Ref` is not suppoerted"
-                    );
-                  }
-                })();
-                if (subQueryRef instanceof Query) {
-                  queryListeners[subQueryKey] =
-                    new GraphCollectionQueryListener(
-                      subQueryRef,
-                      subQuery,
-                      (result: any) => {
-                        this.result!["data"][subQueryKeyName] = result;
-                        this.subQueryLoaded[subQueryKey] = true;
-                        checkUpdate();
-                      },
-                      () => {}
-                    );
-                } else if (subQueryRef instanceof DocumentReference) {
-                  queryListeners[subQueryKey] = new GraphDocumentQueryListener(
-                    subQueryRef,
-                    subQuery,
-                    (result: any) => {
-                      this.result!["data"][subQueryKeyName] = result;
-                      this.subQueryLoaded[subQueryKey] = true;
-                      checkUpdate();
-                    },
-                    () => {}
-                  );
-                }
-                break;
-              }
-              case "extension": {
-                // 拡張キー
-                const extensionRef = subQuery[0];
-                const extensionQuery = subQuery[1];
-
-                if (extensionRef instanceof Query) {
-                  console.log("extension", subQuery);
-                  queryListeners[subQueryKey] =
-                    new GraphCollectionQueryListener(
-                      extensionRef,
-                      extensionQuery,
-                      (result: any) => {
-                        this.result!["data"][subQueryKey] = result;
-                        this.subQueryLoaded[subQueryKey] = true;
-                        checkUpdate();
-                      },
-                      () => {}
-                    );
-                } else if (extensionRef instanceof DocumentReference) {
-                  console.log("extension", subQuery);
-                  queryListeners[subQueryKey] = new GraphDocumentQueryListener(
-                    extensionRef,
-                    extensionQuery,
-                    (result: any) => {
-                      this.result!["data"][subQueryKey] = result;
-                      this.subQueryLoaded[subQueryKey] = true;
-                      checkUpdate();
-                    },
-                    () => {}
-                  );
-                }
-
-                break;
-              }
-            }
-          }
-          this.queryListeners[docChange.doc.ref.path] = queryListeners;
-          break;
+    this.listenerUnsubscriber = onSnapshot(ref, (rawSnapshot) => {
+      const snapshot = makeGraphDocumentSnapshot(rawSnapshot);
+      if (this.queryListener) {
+        if (snapshot.exist) {
+          this.queryListener.updateSnapshot(snapshot);
+        } else {
+          this.queryListener.unsubscribe();
         }
-        case "removed":
-          // TODO
-          break;
-        case "modified":
-          // TODO
-          break;
-        case "notExists":
-          // TODO
-          break;
+      } else {
+        if (snapshot.exist) {
+          this.queryListener = new GraphQueryListener(
+            snapshot,
+            query,
+            onUpdate
+          );
+        } else {
+          onUpdate(undefined);
+          this.loading = false;
+        }
       }
-      checkUpdate();
+      this.isSnapshotInitialized = true;
     });
   }
 
-  updateQuery(newRef: any, newQuery: any): boolean {
-    return false;
+  updateQuery(newQuery: any): boolean {
+    this.query = newQuery;
+    if (this.queryListener) {
+      const hasUpdate = this.queryListener.updateQuery(newQuery);
+      if (hasUpdate) {
+        this.loading = true;
+      }
+      return hasUpdate;
+    } else {
+      return false;
+    }
+  }
+
+  unsubscribe(): void {
+    if (this.queryListener) {
+      this.queryListener.unsubscribe();
+    }
+    this.listenerUnsubscriber();
   }
 }
 
-class GraphCollectionQueryListener {
+class GraphCollectionListener implements GraphListener {
   ref: Query;
-  listener: any;
+  listenerUnsubscriber: Unsubscribe;
   query: any;
-  queryListenersCollection: Record<string, Record<string, GraphQueryListener>>;
+  queryListeners: Record<string, GraphQueryListener>;
   result: GraphDocumentSnapshot<any>[];
   loading: boolean;
-  subQueryLoadedList: Record<string, boolean>[];
 
   constructor(
     ref: Query,
@@ -484,221 +638,111 @@ class GraphCollectionQueryListener {
     this.ref = ref;
     this.query = query;
     this.result = [];
-    this.subQueryLoadedList = [];
-    this.queryListenersCollection = {};
+    this.queryListeners = {};
 
-    const update = () => {
-      handleUpdate(this.result);
-    };
+    const onUpdate = (path: string, result: GraphDocumentSnapshot<any>) => {
+      const docIndex = this.result.findIndex((res) => res.ref.path === path);
+      if (docIndex === -1) {
+        return;
+      }
 
-    const checkUpdate = () => {
-      console.log("loadedlist", this.subQueryLoadedList);
+      this.result[docIndex]["data"] = result;
+
       if (
-        this.subQueryLoadedList.every((subSubQueryLoaded) =>
-          Object.values(subSubQueryLoaded).every((res: any) => res)
+        Object.values(this.queryListeners).every(
+          (queryListener) => queryListener.isQueryInitialized
         )
       ) {
         console.log("update", ref, query);
-        update();
+        this.loading = false;
+        handleUpdate(this.result);
       }
     };
 
     console.log(`set onSnapshot ${(ref as any).path}`);
-    this.listener = onSnapshot(ref, (snapshot) => {
-      for (const docChange of snapshot.docChanges()) {
+    this.listenerUnsubscriber = onSnapshot(ref, (querySnapshot) => {
+      for (const docChange of querySnapshot.docChanges()) {
         console.log(docChange.type);
+        const snapshot = makeGraphQueryDocumentSnapshot(docChange.doc);
         switch (docChange.type) {
           case "added": {
-            const graphDocumentSnapshot = makeGraphQueryDocumentSnapshot(
-              docChange.doc
-            );
-            const documentKeys = Object.keys(graphDocumentSnapshot.data);
-            const query =
-              typeof this.query === "function"
-                ? this.query(graphDocumentSnapshot)
-                : this.query;
-            this.result = insert(
-              this.result,
-              graphDocumentSnapshot,
-              docChange.newIndex
-            );
-            this.subQueryLoadedList = insert(
-              this.subQueryLoadedList,
-              {},
-              docChange.newIndex
-            );
-            for (const [subQueryKey, subQuery] of Object.entries(query) as [
-              any,
-              any
-            ]) {
-              console.log(
-                "queryType",
-                detectQueryType(subQueryKey, subQuery),
-                subQueryKey,
-                subQuery
+            this.queryListeners[docChange.doc.ref.path] =
+              new GraphQueryListener(snapshot, query, (result) =>
+                onUpdate(docChange.doc.ref.path, result)
               );
-              switch (detectQueryType(subQueryKey, subQuery)) {
-                case "external": {
-                  const subQueryRef = graphDocumentSnapshot.data[subQueryKey];
-                  if (subQueryRef != null) {
-                    this.subQueryLoadedList[docChange.newIndex][subQueryKey] =
-                      false;
-                  }
-                  break;
-                }
-                case "extension": {
-                  this.subQueryLoadedList[docChange.newIndex][subQueryKey] =
-                    false;
-                  break;
-                }
-              }
-            }
-            console.log("loadedList:=", this.subQueryLoadedList);
-            const queryListeners: Record<string, GraphQueryListener> = {};
-            for (const [subQueryKey, subQuery] of Object.entries(query) as [
-              any,
-              any
-            ]) {
-              const subQueryRef = graphDocumentSnapshot.data[subQueryKey];
-              switch (detectQueryType(subQueryKey, subQuery)) {
-                case "external": {
-                  console.log("external", subQuery, subQueryRef);
-                  if (subQueryRef == null) {
-                    continue;
-                  }
-                  if (
-                    !(
-                      subQueryRef instanceof DocumentReference ||
-                      subQueryRef instanceof Query
-                    )
-                  ) {
-                    throw new Error(
-                      `Unreachable. Expect ref, get ${subQueryRef}.`
-                    );
-                  }
-                  // 外部キー
-                  const subQueryKeyName = (() => {
-                    if ((subQueryKey as string).endsWith("Ref")) {
-                      return (subQueryKey as string).substring(
-                        0,
-                        (subQueryKey as string).length - 3
-                      );
-                    } else {
-                      throw new Error(
-                        "Unexpected. field key without endsWith `Ref` is not suppoerted"
-                      );
-                    }
-                  })();
-                  if (subQueryRef instanceof Query) {
-                    queryListeners[subQueryKey] =
-                      new GraphCollectionQueryListener(
-                        subQueryRef,
-                        subQuery,
-                        (result: any) => {
-                          const index = this.result.findIndex(
-                            (res) => res.ref.path === docChange.doc.ref.path
-                          );
-                          if (index !== -1) {
-                            this.result[index]["data"][subQueryKeyName] =
-                              result;
-                            this.subQueryLoadedList[index][subQueryKey] = true;
-                            checkUpdate();
-                          }
-                        },
-                        () => {}
-                      );
-                  } else if (subQueryRef instanceof DocumentReference) {
-                    queryListeners[subQueryKey] =
-                      new GraphDocumentQueryListener(
-                        subQueryRef,
-                        subQuery,
-                        (result: any) => {
-                          const index = this.result.findIndex(
-                            (res) => res.ref.path === docChange.doc.ref.path
-                          );
-                          if (index !== -1) {
-                            this.result[index]["data"][subQueryKeyName] =
-                              result;
-                            this.subQueryLoadedList[index][subQueryKey] = true;
-                            checkUpdate();
-                          }
-                        },
-                        () => {}
-                      );
-                  }
-                  break;
-                }
-                case "extension": {
-                  // 拡張キー
-                  const extensionRef = subQuery[0];
-                  const extensionQuery = subQuery[1];
-
-                  if (extensionRef instanceof Query) {
-                    console.log("extension", subQuery);
-                    queryListeners[subQueryKey] =
-                      new GraphCollectionQueryListener(
-                        extensionRef,
-                        extensionQuery,
-                        (result: any) => {
-                          const index = this.result.findIndex(
-                            (res) => res.ref.path === docChange.doc.ref.path
-                          );
-                          if (index !== -1) {
-                            this.result[index]["data"][subQueryKey] = result;
-                            this.subQueryLoadedList[index][subQueryKey] = true;
-                            checkUpdate();
-                          }
-                        },
-                        () => {}
-                      );
-                  } else if (extensionRef instanceof DocumentReference) {
-                    console.log("extension", subQuery);
-                    queryListeners[subQueryKey] =
-                      new GraphDocumentQueryListener(
-                        extensionRef,
-                        extensionQuery,
-                        (result: any) => {
-                          const index = this.result.findIndex(
-                            (res) => res.ref.path === docChange.doc.ref.path
-                          );
-                          if (index !== -1) {
-                            this.result[index]["data"][subQueryKey] = result;
-                            this.subQueryLoadedList[index][subQueryKey] = true;
-                            checkUpdate();
-                          }
-                        },
-                        () => {}
-                      );
-                  }
-
-                  break;
-                }
-              }
-            }
-            this.queryListenersCollection[docChange.doc.ref.path] =
-              queryListeners;
+            this.result = insert(this.result, snapshot, docChange.newIndex);
             break;
           }
           case "removed":
-            // TODO
+            this.queryListeners[docChange.doc.ref.path].unsubscribe();
             break;
           case "modified":
-            // TODO
+            this.queryListeners[docChange.doc.ref.path].updateSnapshot(
+              snapshot
+            );
             break;
         }
       }
-      checkUpdate();
     });
   }
 
-  updateQuery(newRef: any, newQuery: any): boolean {
-    return false;
+  updateQuery(newQuery: any): boolean {
+    this.query = newQuery;
+    if (this.queryListeners) {
+      const hasUpdate = Object.values(this.queryListeners).some(
+        (queryListener) => queryListener.updateQuery(newQuery)
+      );
+      if (hasUpdate) {
+        this.loading = true;
+      }
+      return hasUpdate;
+    } else {
+      return false;
+    }
+  }
+
+  unsubscribe(): void {
+    if (this.queryListeners) {
+      Object.values(this.queryListeners).forEach((queryListener) =>
+        queryListener.unsubscribe()
+      );
+    }
+    this.listenerUnsubscriber();
   }
 }
 
-type GraphQueryListener =
-  | GraphDocumentQueryListener
-  | GraphCollectionQueryListener;
+// ! old not work
+export function useRootQuery<Ref = {}, Q extends GraphQuery<{}> = {}>(
+  _query: Q
+): [Expand<JoinedDataInner<{}, Q>> | undefined, boolean, Error | undefined] {
+  const [value, setValue] = useState<Expand<JoinedDataInner<{}, Q>>>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<FirestoreError>();
+
+  useEffect(() => {
+    const query: any = _query;
+    const result: any = {};
+    const allKey: string[] = Object.keys(query);
+    const allListener: Record<string, any> = {};
+    for (const key of allKey) {
+      const subQuery = query[key];
+      allListener[key] = subQuery(
+        (subResult: any) => {
+          result[key] = subResult;
+          if (Object.keys(result).length === allKey.length) {
+            if (loading) setLoading(false);
+            setValue(result);
+          }
+        },
+        (error: FirestoreError) => {
+          setError(error);
+        }
+      );
+    }
+  }, []);
+
+  return [value, loading, error];
+}
 
 export function useQuery<
   Ref extends AnyReference,
@@ -715,30 +759,55 @@ export function useQuery<
     loading: true,
   });
   const [error, setError] = useState<FirestoreError>();
-  const listener = useRef<GraphCollectionQueryListener>();
+  const listener = useRef<GraphListener>();
+
+  const createListener = () => {
+    listener.current = makeGraphListener(
+      ref,
+      query,
+      (result) => {
+        setResult({ value: result, loading: false });
+      },
+      () => {
+        setError(error);
+      }
+    );
+  };
 
   useEffect(() => {
-    if (ref instanceof Query) {
-      listener.current = new GraphCollectionQueryListener(
-        ref,
-        query,
-        (result) => {
-          setResult({ value: result, loading: false });
-        },
-        () => {
-          setError(error);
-        }
-      );
-    }
+    createListener();
   }, []);
 
   // update query and determine loading state
+  const currentRef = useRef(ref);
   const immediateLoading = useMemo(() => {
-    if (listener.current?.updateQuery(ref, query)) {
-      setResult(({ value }) => ({ value, loading: true }));
+    const prevRef = currentRef.current;
+    currentRef.current = ref;
+    if (
+      (prevRef instanceof DocumentReference &&
+        ref instanceof DocumentReference &&
+        refEqual(prevRef, ref)) ||
+      (prevRef instanceof Query &&
+        ref instanceof Query &&
+        queryEqual(prevRef, ref))
+    ) {
+      // ref not changed
+      if (listener.current?.updateQuery(query)) {
+        // query changed
+        setResult(({ value }) => ({ value, loading: true }));
+        return true;
+      } else {
+        // query not changed
+        return loading;
+      }
+    } else {
+      // ref changed
+      if (listener.current) {
+        listener.current.unsubscribe();
+        createListener();
+      }
       return true;
     }
-    return loading;
   }, [ref, query]);
 
   return [value, immediateLoading, error];
