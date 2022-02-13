@@ -36,4 +36,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: yarn semantic-release
+        run: yarn semantic-release && npm dist-tag add firestore-graph-hooks@$(npm view firestore-graph-hooks dist-tags.alpha) latest
