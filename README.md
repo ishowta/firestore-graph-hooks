@@ -17,9 +17,9 @@ export const App = () => {
     <div>
         {projects.data.map(project => (
             <div key={project.id}>
-                <p>{projects[0].owner.name}</p>
-                <p>{projects[0].owner.nowPlaying.title}</p>
-                <p>{projects[0].kanbans.length}</p>
+                <p>{projects[0].data.owner.data?.name}</p>
+                <p>{projects[0].data.owner.data?.nowPlaying.data?.title}</p>
+                <p>{projects[0].data.kanbans.length}</p>
             </div>
         ))}
     </div>
