@@ -2,13 +2,9 @@ import {
   CollectionMetadata,
   GraphDocumentSnapshot,
   WithCollectionMetadata,
-} from "firestore-graph-hooks/src/types";
-import {
-  field,
-  useQuery,
-  useRootQuery,
-} from "firestore-graph-hooks/src/useQuery";
-import { assertType, Equal } from "firestore-graph-hooks/src/utils";
+} from '../src/types';
+import { field, useQuery, useRootQuery } from '../src/useQuery';
+import { assertType, Equal } from '../src/utils';
 import {
   getKanbans,
   getProjects,
@@ -19,7 +15,7 @@ import {
   TODO,
   TODOList,
   User,
-} from "./schema";
+} from './schema';
 
 const types = () => {
   let [projects] = useQuery(getProjects(), (project) => ({
@@ -46,8 +42,8 @@ const types = () => {
 };
 
 type ManuelaProjects = NonNullable<ReturnType<typeof types>[0]>;
-type ManuelaOwner = ManuelaProjects[number]["owner"];
-type ManuelaKanban = ManuelaProjects[number]["kanbans"][number];
+type ManuelaOwner = ManuelaProjects[number]['owner'];
+type ManuelaKanban = ManuelaProjects[number]['kanbans'][number];
 
 type Query2ResultType = NonNullable<ReturnType<typeof types>[1]>;
 
@@ -82,8 +78,8 @@ assertType<
 
 // query result <: original document
 assertType<ManuelaProjects extends Project[] ? true : false>();
-assertType<ManuelaProjects[number]["owner"] extends User ? true : false>();
+assertType<ManuelaProjects[number]['owner'] extends User ? true : false>();
 assertType<
-  ManuelaProjects[number]["kanbans"] extends Kanban[] ? true : false
+  ManuelaProjects[number]['kanbans'] extends Kanban[] ? true : false
 >();
 // let _raw: Project[] = projects;

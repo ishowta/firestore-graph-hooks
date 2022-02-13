@@ -1,0 +1,651 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`makeGraphListener 1`] = `
+Array [
+  Object {
+    "data": Object {
+      "createdAt": "[Timestamp]",
+      "kanbans": Array [
+        Object {
+          "data": Object {
+            "createdAt": "[Timestamp]",
+            "title": "0th kanban",
+            "todoLists": Array [
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 0 World!",
+                  "name": "0th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 1 World!",
+                  "name": "1th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 2 World!",
+                  "name": "2th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+            ],
+          },
+          "exist": true,
+          "id": "[ID]",
+          "metadata": SnapshotMetadata {
+            "fromCache": false,
+            "hasPendingWrites": false,
+          },
+          "ref": "[Ref]",
+        },
+        Object {
+          "data": Object {
+            "createdAt": "[Timestamp]",
+            "title": "1th kanban",
+            "todoLists": Array [
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 0 World!",
+                  "name": "0th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 1 World!",
+                  "name": "1th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 2 World!",
+                  "name": "2th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+            ],
+          },
+          "exist": true,
+          "id": "[ID]",
+          "metadata": SnapshotMetadata {
+            "fromCache": false,
+            "hasPendingWrites": false,
+          },
+          "ref": "[Ref]",
+        },
+        Object {
+          "data": Object {
+            "createdAt": "[Timestamp]",
+            "title": "2th kanban",
+            "todoLists": Array [
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 0 World!",
+                  "name": "0th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 1 World!",
+                  "name": "1th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 2 World!",
+                  "name": "2th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+            ],
+          },
+          "exist": true,
+          "id": "[ID]",
+          "metadata": SnapshotMetadata {
+            "fromCache": false,
+            "hasPendingWrites": false,
+          },
+          "ref": "[Ref]",
+        },
+      ],
+      "owner": Object {
+        "data": Object {
+          "createdAt": "[Timestamp]",
+          "name": "0man",
+          "nowPlaying": Object {
+            "data": Object {
+              "createdAt": "[Timestamp]",
+              "scheduledTime": 0,
+              "title": "0th todo",
+            },
+            "exist": true,
+            "id": "[ID]",
+            "metadata": SnapshotMetadata {
+              "fromCache": false,
+              "hasPendingWrites": false,
+            },
+            "ref": "[Ref]",
+          },
+          "nowPlayingRef": "[Ref]",
+        },
+        "exist": true,
+        "id": "[ID]",
+        "metadata": SnapshotMetadata {
+          "fromCache": false,
+          "hasPendingWrites": false,
+        },
+        "ref": "[Ref]",
+      },
+      "ownerRef": "[Ref]",
+      "title": "0th project",
+    },
+    "exist": true,
+    "id": "[ID]",
+    "metadata": SnapshotMetadata {
+      "fromCache": false,
+      "hasPendingWrites": false,
+    },
+    "ref": "[Ref]",
+  },
+  Object {
+    "data": Object {
+      "createdAt": "[Timestamp]",
+      "kanbans": Array [
+        Object {
+          "data": Object {
+            "createdAt": "[Timestamp]",
+            "title": "0th kanban",
+            "todoLists": Array [
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 0 World!",
+                  "name": "0th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 1 World!",
+                  "name": "1th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 2 World!",
+                  "name": "2th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+            ],
+          },
+          "exist": true,
+          "id": "[ID]",
+          "metadata": SnapshotMetadata {
+            "fromCache": false,
+            "hasPendingWrites": false,
+          },
+          "ref": "[Ref]",
+        },
+        Object {
+          "data": Object {
+            "createdAt": "[Timestamp]",
+            "title": "1th kanban",
+            "todoLists": Array [
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 0 World!",
+                  "name": "0th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 1 World!",
+                  "name": "1th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 2 World!",
+                  "name": "2th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+            ],
+          },
+          "exist": true,
+          "id": "[ID]",
+          "metadata": SnapshotMetadata {
+            "fromCache": false,
+            "hasPendingWrites": false,
+          },
+          "ref": "[Ref]",
+        },
+        Object {
+          "data": Object {
+            "createdAt": "[Timestamp]",
+            "title": "2th kanban",
+            "todoLists": Array [
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 0 World!",
+                  "name": "0th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 1 World!",
+                  "name": "1th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 2 World!",
+                  "name": "2th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+            ],
+          },
+          "exist": true,
+          "id": "[ID]",
+          "metadata": SnapshotMetadata {
+            "fromCache": false,
+            "hasPendingWrites": false,
+          },
+          "ref": "[Ref]",
+        },
+      ],
+      "owner": Object {
+        "data": Object {
+          "createdAt": "[Timestamp]",
+          "name": "1man",
+          "nowPlaying": Object {
+            "data": Object {
+              "createdAt": "[Timestamp]",
+              "scheduledTime": 0,
+              "title": "0th todo",
+            },
+            "exist": true,
+            "id": "[ID]",
+            "metadata": SnapshotMetadata {
+              "fromCache": false,
+              "hasPendingWrites": false,
+            },
+            "ref": "[Ref]",
+          },
+          "nowPlayingRef": "[Ref]",
+        },
+        "exist": true,
+        "id": "[ID]",
+        "metadata": SnapshotMetadata {
+          "fromCache": false,
+          "hasPendingWrites": false,
+        },
+        "ref": "[Ref]",
+      },
+      "ownerRef": "[Ref]",
+      "title": "1th project",
+    },
+    "exist": true,
+    "id": "[ID]",
+    "metadata": SnapshotMetadata {
+      "fromCache": false,
+      "hasPendingWrites": false,
+    },
+    "ref": "[Ref]",
+  },
+  Object {
+    "data": Object {
+      "createdAt": "[Timestamp]",
+      "kanbans": Array [
+        Object {
+          "data": Object {
+            "createdAt": "[Timestamp]",
+            "title": "0th kanban",
+            "todoLists": Array [
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 0 World!",
+                  "name": "0th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 1 World!",
+                  "name": "1th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 2 World!",
+                  "name": "2th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+            ],
+          },
+          "exist": true,
+          "id": "[ID]",
+          "metadata": SnapshotMetadata {
+            "fromCache": false,
+            "hasPendingWrites": false,
+          },
+          "ref": "[Ref]",
+        },
+        Object {
+          "data": Object {
+            "createdAt": "[Timestamp]",
+            "title": "1th kanban",
+            "todoLists": Array [
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 0 World!",
+                  "name": "0th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 1 World!",
+                  "name": "1th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 2 World!",
+                  "name": "2th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+            ],
+          },
+          "exist": true,
+          "id": "[ID]",
+          "metadata": SnapshotMetadata {
+            "fromCache": false,
+            "hasPendingWrites": false,
+          },
+          "ref": "[Ref]",
+        },
+        Object {
+          "data": Object {
+            "createdAt": "[Timestamp]",
+            "title": "2th kanban",
+            "todoLists": Array [
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 0 World!",
+                  "name": "0th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 1 World!",
+                  "name": "1th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+              Object {
+                "data": Object {
+                  "createdAt": "[Timestamp]",
+                  "memo": "Hello 2 World!",
+                  "name": "2th todoList",
+                },
+                "exist": true,
+                "id": "[ID]",
+                "metadata": SnapshotMetadata {
+                  "fromCache": false,
+                  "hasPendingWrites": false,
+                },
+                "ref": "[Ref]",
+              },
+            ],
+          },
+          "exist": true,
+          "id": "[ID]",
+          "metadata": SnapshotMetadata {
+            "fromCache": false,
+            "hasPendingWrites": false,
+          },
+          "ref": "[Ref]",
+        },
+      ],
+      "owner": Object {
+        "data": Object {
+          "createdAt": "[Timestamp]",
+          "name": "2man",
+          "nowPlaying": Object {
+            "data": Object {
+              "createdAt": "[Timestamp]",
+              "scheduledTime": 0,
+              "title": "0th todo",
+            },
+            "exist": true,
+            "id": "[ID]",
+            "metadata": SnapshotMetadata {
+              "fromCache": false,
+              "hasPendingWrites": false,
+            },
+            "ref": "[Ref]",
+          },
+          "nowPlayingRef": "[Ref]",
+        },
+        "exist": true,
+        "id": "[ID]",
+        "metadata": SnapshotMetadata {
+          "fromCache": false,
+          "hasPendingWrites": false,
+        },
+        "ref": "[Ref]",
+      },
+      "ownerRef": "[Ref]",
+      "title": "2th project",
+    },
+    "exist": true,
+    "id": "[ID]",
+    "metadata": SnapshotMetadata {
+      "fromCache": false,
+      "hasPendingWrites": false,
+    },
+    "ref": "[Ref]",
+  },
+]
+`;

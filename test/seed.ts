@@ -1,5 +1,11 @@
-import { addDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { range } from "lodash-es";
+import {
+  addDoc,
+  Firestore,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
+import { range } from 'lodash-es';
 import {
   getKanbanOrder,
   getKanbans,
@@ -8,12 +14,12 @@ import {
   getTodoLists,
   getTodos,
   getUsers,
-} from "./schema";
+} from './schema';
 
-export const generateSeed = async () => {
+export const generateSeed = async (firestore: Firestore) => {
   const userRefs = await Promise.all(
     range(10).map((i) =>
-      addDoc(getUsers(), {
+      addDoc(getUsers(firestore), {
         createdAt: serverTimestamp(),
         name: `${i}man`,
       })
@@ -21,7 +27,7 @@ export const generateSeed = async () => {
   );
   const projectRefs = await Promise.all(
     range(3).map(async (i) => {
-      const projectRef = await addDoc(getProjects(), {
+      const projectRef = await addDoc(getProjects(firestore), {
         createdAt: serverTimestamp(),
         ownerRef: userRefs[i],
         title: `${i}th project`,
@@ -47,7 +53,6 @@ export const generateSeed = async () => {
                     scheduledTime: l * 30 * 60,
                   });
                   if (j === 0 && k === 0 && l === 0) {
-                    console.log("nowplay", userRefs[i], i);
                     updateDoc(userRefs[i], {
                       nowPlayingRef: todoRef,
                     });

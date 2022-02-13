@@ -4,8 +4,8 @@ import {
   doc,
   DocumentReference,
   Timestamp,
-} from "@firebase/firestore";
-import { firestore } from "./firebase";
+} from '@firebase/firestore';
+import { Firestore } from 'firebase/firestore';
 
 export type Second = number & {};
 
@@ -18,8 +18,8 @@ export type User = {
   name: string;
   nowPlayingRef?: DocumentReference<TODO>;
 };
-export const getUsers = () =>
-  collection(firestore, "users") as CollectionReference<User>;
+export const getUsers = (firestore: Firestore) =>
+  collection(firestore, 'users') as CollectionReference<User>;
 
 /**
  * プロジェクト
@@ -30,8 +30,8 @@ export type Project = {
   createdAt: Timestamp;
   title?: string;
 };
-export const getProjects = () =>
-  collection(firestore, "projects") as CollectionReference<Project>;
+export const getProjects = (firestore: Firestore) =>
+  collection(firestore, 'projects') as CollectionReference<Project>;
 
 /**
  * カンバン
@@ -42,7 +42,7 @@ export type Kanban = {
   createdAt: Timestamp;
 };
 export const getKanbans = (projectRef: DocumentReference<Project>) =>
-  collection(projectRef, "kanbans") as CollectionReference<Kanban>;
+  collection(projectRef, 'kanbans') as CollectionReference<Kanban>;
 
 /**
  * カンバンオーダー
@@ -53,8 +53,8 @@ export type KanbanOrder = {
 };
 export const getKanbanOrder = (projectRef: DocumentReference<Project>) =>
   doc(
-    collection(projectRef, "metadata"),
-    "kanbanOrder"
+    collection(projectRef, 'metadata'),
+    'kanbanOrder'
   ) as DocumentReference<KanbanOrder>;
 
 /**
@@ -69,7 +69,7 @@ export type TODOList = {
   createdAt: Timestamp;
 };
 export const getTodoLists = (kanbanRef: DocumentReference<Kanban>) =>
-  collection(kanbanRef, "todoLists") as CollectionReference<TODOList>;
+  collection(kanbanRef, 'todoLists') as CollectionReference<TODOList>;
 
 /**
  * TODOリストオーダー
@@ -80,8 +80,8 @@ export type TODOListOrder = {
 };
 export const getTODOListOrder = (kanbanRef: DocumentReference<Kanban>) =>
   doc(
-    collection(kanbanRef, "metadata"),
-    "todoListOrder"
+    collection(kanbanRef, 'metadata'),
+    'todoListOrder'
   ) as DocumentReference<TODOListOrder>;
 
 /**
@@ -109,7 +109,7 @@ export type TODO = {
   createdAt: Timestamp;
 };
 export const getTodos = (todoListRef: DocumentReference<TODOList>) =>
-  collection(todoListRef, "todos") as CollectionReference<TODO>;
+  collection(todoListRef, 'todos') as CollectionReference<TODO>;
 
 /**
  * TODOオーダー
@@ -120,6 +120,6 @@ export type TODOOrder = {
 };
 export const getTODOOrder = (todoListRef: DocumentReference<TODOList>) =>
   doc(
-    collection(todoListRef, "metadata"),
-    "todoOrder"
+    collection(todoListRef, 'metadata'),
+    'todoOrder'
   ) as DocumentReference<TODOOrder>;
