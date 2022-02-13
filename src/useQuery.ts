@@ -63,7 +63,7 @@ export function useQuery<
   Ref extends AnyReference,
   Q extends GraphQuery<RefToDoc<Ref>>
 >(
-  ref: Ref,
+  ref: Ref | undefined,
   query: Q
 ): [JoinedData<Ref, Q> | undefined, boolean, Error | undefined] {
   const [{ value, loading }, setResult] = useState<{
@@ -76,7 +76,7 @@ export function useQuery<
   const [error, setError] = useState<FirestoreError>();
   const listener = useRef<GraphListener>();
 
-  const createListener = () => {
+  const createListener = (ref: AnyReference) => {
     logger.debug('createListener', ref, query);
     listener.current = makeGraphListener(
       ref,
@@ -91,9 +91,11 @@ export function useQuery<
   };
 
   useEffect(() => {
-    logger.debug('init listener');
-    createListener();
-  }, []);
+    if (ref !== undefined && listener.current === undefined) {
+      logger.debug('init listener');
+      createListener(ref);
+    }
+  }, [ref]);
 
   // check update query and determine loading state
   const currentRef = useRef(ref);
@@ -128,7 +130,9 @@ export function useQuery<
       // ref changed
       logger.debug('ref changed');
       listener.current.unsubscribe();
-      createListener();
+      if (ref) {
+        createListener(ref);
+      }
       return true;
     }
   }, [ref, query]);

@@ -24,7 +24,7 @@ import {
 
 const types = () => {
   let firestore: Firestore = {} as any;
-  let [projects] = useQuery(getProjects(firestore), (project) => ({
+  let [projects] = useQuery(getProjects(), (project) => ({
     ownerRef: (_user) => ({
       nowPlayingRef: (todo) => ({
         extraOnlyTestField: field(todo.ref, {}),
@@ -34,8 +34,8 @@ const types = () => {
   }));
 
   let [query2] = useRootQuery({
-    users: field(getUsers(firestore), {}),
-    projects: field(getProjects(firestore), {}),
+    users: field(getUsers(), {}),
+    projects: field(getProjects(), {}),
   });
 
   let expected: ExpectProjectsType = {} as any;

@@ -1,10 +1,8 @@
 import { generateSeed } from './seed';
 import { field } from '../';
 import { getKanbans, getProjects, getTodoLists } from './schema';
-import { getApp } from './firebase';
 import {
   DocumentReference,
-  Firestore,
   orderBy,
   query,
   Query,
@@ -14,18 +12,15 @@ import { makeGraphListener } from '../src/GraphListener';
 import Channel from '@nodeguy/channel';
 import traverse from 'traverse';
 
-let firestore: Firestore;
-
 beforeAll(async () => {
-  firestore = (await getApp()).firestore as any;
-  await generateSeed(firestore);
+  await generateSeed();
 });
 
 test('makeGraphListener', async () => {
   const queryChannel = Channel();
 
   makeGraphListener(
-    query(getProjects(firestore), orderBy('createdAt')),
+    query(getProjects(), orderBy('createdAt')),
     (project: any) => ({
       ownerRef: {
         nowPlayingRef: {},

@@ -6,6 +6,7 @@ import {
   Timestamp,
 } from '@firebase/firestore';
 import { Firestore } from 'firebase/firestore';
+import { firestore } from './firebase';
 
 export type Second = number & {};
 
@@ -18,7 +19,7 @@ export type User = {
   name: string;
   nowPlayingRef?: DocumentReference<TODO>;
 };
-export const getUsers = (firestore: Firestore) =>
+export const getUsers = () =>
   collection(firestore, 'users') as CollectionReference<User>;
 
 /**
@@ -30,7 +31,7 @@ export type Project = {
   createdAt: Timestamp;
   title?: string;
 };
-export const getProjects = (firestore: Firestore) =>
+export const getProjects = () =>
   collection(firestore, 'projects') as CollectionReference<Project>;
 
 /**

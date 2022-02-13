@@ -16,10 +16,10 @@ import {
   getUsers,
 } from './schema';
 
-export const generateSeed = async (firestore: Firestore) => {
+export const generateSeed = async () => {
   const userRefs = await Promise.all(
     range(10).map((i) =>
-      addDoc(getUsers(firestore), {
+      addDoc(getUsers(), {
         createdAt: serverTimestamp(),
         name: `${i}man`,
       })
@@ -27,7 +27,7 @@ export const generateSeed = async (firestore: Firestore) => {
   );
   const projectRefs = await Promise.all(
     range(3).map(async (i) => {
-      const projectRef = await addDoc(getProjects(firestore), {
+      const projectRef = await addDoc(getProjects(), {
         createdAt: serverTimestamp(),
         ownerRef: userRefs[i],
         title: `${i}th project`,
