@@ -40,3 +40,4 @@ export const App = () => {
 - no restriction reference field name mode
 - refactor
 - documentation
+- add guaranteed to exist option to ref field like extension field

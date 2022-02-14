@@ -57,7 +57,7 @@ export function useQuery<
 >(
   ref: Ref | undefined,
   query: Q
-): [JoinedData<Ref, Q> | undefined, boolean, Error | undefined] {
+): [JoinedData<Ref, Q, false> | undefined, boolean, Error | undefined] {
   const [value, loading, error] = useRootQuery({
     base: ref ? field(ref, query) : undefined,
   });
@@ -67,7 +67,14 @@ export function useQuery<
 
 export function field<
   Ref extends AnyReference | undefined,
-  Q extends GraphQuery<RefToDoc<NonNullable<Ref>>>
->(ref: Ref, query: Q): undefined extends Ref ? [Ref, Q] | undefined : [Ref, Q] {
-  return ref ? [ref, query] : (undefined as any);
+  Q extends GraphQuery<RefToDoc<NonNullable<Ref>>>,
+  GuaranteedToExist extends boolean = false
+>(
+  ref: Ref,
+  query: Q,
+  guaranteedToExist?: GuaranteedToExist
+): undefined extends Ref
+  ? [Ref, Q, GuaranteedToExist] | undefined
+  : [Ref, Q, GuaranteedToExist] {
+  return ref ? [ref, query, guaranteedToExist] : (undefined as any);
 }

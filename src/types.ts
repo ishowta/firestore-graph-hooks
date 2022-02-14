@@ -74,11 +74,11 @@ export type GraphQuery<T extends DocumentData> =
     } & {
       [K in Exclude<keyof T, PickRefField<T>>]?: never;
     }) & {
-      [K in string]: unknown | [AnyReference, unknown];
+      [K in string]: unknown | [AnyReference, unknown, boolean];
     })
   // extra fieldのみのクエリ
   | ({ [K in keyof T]?: never } & {
-      [K in string]: unknown | [AnyReference, unknown];
+      [K in string]: unknown | [AnyReference, unknown, boolean];
     })
   // ドキュメントを引数にとってクエリを返す関数
   | ((data: GraphDocumentSnapshot<T>) => GraphQuery<T>);
@@ -112,7 +112,11 @@ export type JoinedDataInner<
           RefToDoc<NonNullable<T[K]>>
         >
         ?
-            | JoinedData<T[K], RequiredGraphQuery<GraphQueryQueryType<T, Q>[K]>>
+            | JoinedData<
+                T[K],
+                RequiredGraphQuery<GraphQueryQueryType<T, Q>[K]>,
+                false
+              >
             | (null extends T[K] ? null : never)
         : never
       : never;
@@ -124,15 +128,17 @@ export type JoinedDataInner<
       keyof GraphQueryQueryType<T, Q>,
       keyof T
     >]: GraphQueryQueryType<T, Q>[K] extends
-      | [infer Ref, infer UQuery]
+      | [infer Ref, infer UQuery, infer GuaranteedToExist]
       | undefined
-      ? Ref extends AnyReference
-        ? UQuery extends Function
-          ? UQuery extends GraphQuery<RefToDoc<Ref>>
-            ? JoinedData<Ref, UQuery>
+      ? GuaranteedToExist extends boolean
+        ? Ref extends AnyReference
+          ? UQuery extends Function
+            ? UQuery extends GraphQuery<RefToDoc<Ref>>
+              ? JoinedData<Ref, UQuery, GuaranteedToExist>
+              : never
+            : Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
+            ? JoinedData<Ref, Required<UQuery>, GuaranteedToExist>
             : never
-          : Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
-          ? JoinedData<Ref, Required<UQuery>>
           : never
         : never
       : never;
@@ -150,12 +156,17 @@ export type RefToDoc<R extends AnyReference> = R extends
 
 export type JoinedData<
   R extends AnyReference,
-  Q extends GraphQuery<RefToDoc<R>>
+  Q extends GraphQuery<RefToDoc<R>>,
+  GuaranteedToExist extends boolean
 > = R extends DocumentReference<infer U>
   ? Q extends GraphQuery<U>
     ? {} extends Omit<JoinedDataInner<U, Q>, keyof U>
-      ? GraphDocumentSnapshot<U>
-      : GraphDocumentSnapshot<U> & {
+      ? true extends GuaranteedToExist
+        ? GraphQueryDocumentSnapshot<U>
+        : GraphDocumentSnapshot<U>
+      : (true extends GuaranteedToExist
+          ? GraphQueryDocumentSnapshot<U>
+          : GraphDocumentSnapshot<U>) & {
           data: Expand<Omit<JoinedDataInner<U, Q>, keyof U>>;
         }
     : never
