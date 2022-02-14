@@ -66,8 +66,8 @@ export function useQuery<
 }
 
 export function field<
-  Ref extends AnyReference,
-  Q extends GraphQuery<RefToDoc<Ref>>
->(ref: Ref, query: Q): [Ref, Q] {
-  return [ref, query];
+  Ref extends AnyReference | undefined,
+  Q extends GraphQuery<RefToDoc<NonNullable<Ref>>>
+>(ref: Ref, query: Q): undefined extends Ref ? [Ref, Q] | undefined : [Ref, Q] {
+  return ref ? [ref, query] : (undefined as any);
 }
