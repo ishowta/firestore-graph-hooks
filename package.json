@@ -20,6 +20,7 @@
     "emulator": "firebase emulators:start --project demo-firebase-graph-hooks",
     "test": "firebase emulators:exec --project demo-firebase-graph-hooks \"dts test --passWithNoTests\"",
     "test:ci": "firebase emulators:exec --project demo-firebase-graph-hooks \"dts test --passWithNoTests --ci --coverage --maxWorkers=2\"",
+    "test:coverage": "firebase emulators:exec --project demo-firebase-graph-hooks \"dts test --coverage\"",
     "semantic-release": "semantic-release"
   },
   "husky": {
