@@ -366,16 +366,97 @@ export class GraphQueryListener {
         }
       }
     }
+
+    // check query keys for update extension field
+    // - calc query keys diff
+    //   - update extension result
+    //   - calc subQuery diff for each query key diff
+    //     - update subQuery
+    const prevSubQueryKeys = Object.keys(prevQuery);
+    const newSubQueryKeys = Object.keys(newQuery);
+    const allSubQueryKeys = union(prevSubQueryKeys, newSubQueryKeys);
+    for (const subQueryKey of allSubQueryKeys) {
+      // skip not extension key
+      if (allSnapshotKeys.includes(subQueryKey)) {
+        continue;
+      }
+
+      if (
+        prevSubQueryKeys.includes(subQueryKey) &&
+        !newSubQueryKeys.includes(subQueryKey)
+      ) {
+        // key removed
+        this.logger.debug('key removed', subQueryKey);
+        hasUpdate = true;
+        if (dryRun) return hasUpdate;
+        if (this.result && subQueryKey in this.result['data']) {
+          delete this.result['data'][subQueryKey];
+        }
+        if (this.subQueryListeners && subQueryKey in this.subQueryListeners) {
+          this.subQueryListeners[subQueryKey].unsubscribe();
+          delete this.subQueryListeners[subQueryKey];
+        }
+      }
+      if (
+        !prevSubQueryKeys.includes(subQueryKey) &&
+        newSubQueryKeys.includes(subQueryKey)
+      ) {
+        // key created
+        this.logger.debug('key created', subQueryKey);
+        hasUpdate = true;
+        if (dryRun) return hasUpdate;
+        if (subQueryKey in newQuery) {
+          const subQuery = makeSubQuery(newSnapshot, subQueryKey, newQuery);
+          this.createSubQueryListener(newSnapshot, subQueryKey, subQuery);
+        }
+      }
+      if (
+        prevSubQueryKeys.includes(subQueryKey) &&
+        newSubQueryKeys.includes(subQueryKey)
+      ) {
+        // key not changed
+        this.logger.debug('key not changed', subQueryKey);
+        if (!(subQueryKey in prevQuery) && !(subQueryKey in newQuery)) {
+          // subQuery not exist
+          this.logger.debug('subQuery not exist', subQueryKey);
+        }
+        if (subQueryKey in prevQuery && !(subQueryKey in newQuery)) {
+          // subQuery removed
+          this.logger.debug('subQuery removed', subQueryKey);
+          hasUpdate = true;
+          if (dryRun) return hasUpdate;
+          this.subQueryListeners[subQueryKey].unsubscribe();
+          delete this.subQueryListeners[subQueryKey];
+        }
+        if (!(subQueryKey in prevQuery) && subQueryKey in newQuery) {
+          // subQuery created
+          this.logger.debug('subQuery created', subQueryKey);
+          hasUpdate = true;
+          if (dryRun) return hasUpdate;
+          const subQuery = makeSubQuery(newSnapshot, subQueryKey, newQuery);
+          this.createSubQueryListener(newSnapshot, subQueryKey, subQuery);
+        }
+        if (subQueryKey in prevQuery && subQueryKey in newQuery) {
+          // subQuery may modified
+          this.logger.debug('subQuery may modified', subQueryKey);
+          const subQueryHasUpdate = this.updateSubQueryListener(
+            subQueryKey,
+            prevSnapshot,
+            (prevQuery as any)[subQueryKey],
             newSnapshot,
-            newQuery
+            (newQuery as any)[subQueryKey],
+            dryRun
           );
           if (subQueryHasUpdate) {
             hasUpdate = true;
+            if (dryRun) return hasUpdate;
           }
         }
       }
     }
+
     this.logger.debug('hasUpdate: ', hasUpdate);
+
     return hasUpdate;
   }
 
