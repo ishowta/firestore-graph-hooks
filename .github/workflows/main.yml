@@ -9,6 +9,9 @@ jobs:
       matrix:
         node: ['14.x', '16.x']
         os: [ubuntu-latest, windows-latest, macOS-latest]
+        
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN_READONLY }}
 
     steps:
       - name: Checkout repo
@@ -36,4 +39,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: yarn semantic-release
+        run: yarn semantic-release && npm dist-tag add firestore-graph-hooks@$(npm view firestore-graph-hooks dist-tags.alpha) latest

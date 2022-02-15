@@ -15,11 +15,11 @@ export const App = () => {
 
   return (
     <div>
-        {projects.data.map(project => (
+        {projects.map(project => (
             <div key={project.id}>
-                <p>{projects[0].data.owner.data?.name}</p>
-                <p>{projects[0].data.owner.data?.nowPlaying.data?.title}</p>
-                <p>{projects[0].data.kanbans.length}</p>
+                <p>{project.data.owner.data?.name}</p>
+                <p>{project.data.owner.data?.nowPlaying.data?.title}</p>
+                <p>{project.data.kanbans.length}</p>
             </div>
         ))}
     </div>
