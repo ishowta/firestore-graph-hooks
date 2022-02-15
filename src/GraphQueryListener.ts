@@ -256,6 +256,10 @@ export class GraphQueryListener {
       this.result = {
         ...this.result,
         ...newSnapshot,
+        data: {
+          ...this.result.data,
+          ...newSnapshot.data,
+        },
       };
     }
     this.logger.debug('updateSnapshot', newSnapshot, this.result, dryRun);
