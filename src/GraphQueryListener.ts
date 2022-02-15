@@ -91,6 +91,19 @@ export class GraphQueryListener {
       : queryFactory;
   }
 
+  private static isQueryKey(snapshotKey: string) {
+    return snapshotKey.endsWith('Ref');
+  }
+
+  private static renameSnapshotKeyToQueryKey = (snapshotKey: string) => {
+    if (!GraphQueryListener.isQueryKey(snapshotKey)) {
+      throw new Error(
+        'Unexpected. field key without endsWith `Ref` is not supported'
+      );
+    }
+    return snapshotKey.substring(0, snapshotKey.length - 3);
+  };
+
   private createSubQueryListener(
     snapshot: GraphQueryDocumentSnapshot<any>,
     subQueryKey: string,
@@ -121,16 +134,8 @@ export class GraphQueryListener {
     let subQueryKeyName: string;
     switch (subQuery.type) {
       case 'external':
-        if ((subQueryKey as string).endsWith('Ref')) {
-          subQueryKeyName = (subQueryKey as string).substring(
-            0,
-            (subQueryKey as string).length - 3
-          );
-        } else {
-          throw new Error(
-            'Unexpected. field key without endsWith `Ref` is not supported'
-          );
-        }
+        subQueryKeyName =
+          GraphQueryListener.renameSnapshotKeyToQueryKey(subQueryKey);
         break;
       case 'extension':
         subQueryKeyName = subQueryKey;
@@ -283,80 +288,89 @@ export class GraphQueryListener {
     //   - update result
     //   - calc subQuery diff for each snapshot diff
     //     - update subQuery
-    const prevSnapshotKeys = Object.keys(prevSnapshot.data);
-    const newSnapshotKeys = Object.keys(newSnapshot.data);
-    const allSnapshotKeys = union(prevSnapshotKeys, newSnapshotKeys);
-    for (const snapshotKey of allSnapshotKeys) {
+    const prevSnapshotRefKeys = Object.keys(prevSnapshot.data).filter(
+      GraphQueryListener.isQueryKey
+    );
+    const newSnapshotRefKeys = Object.keys(newSnapshot.data).filter(
+      GraphQueryListener.isQueryKey
+    );
+    const allSnapshotRefKeys = union(prevSnapshotRefKeys, newSnapshotRefKeys);
+    for (const snapshotRefKey of allSnapshotRefKeys) {
       if (
-        prevSnapshotKeys.includes(snapshotKey) &&
-        !newSnapshotKeys.includes(snapshotKey)
+        prevSnapshotRefKeys.includes(snapshotRefKey) &&
+        !newSnapshotRefKeys.includes(snapshotRefKey)
       ) {
         // key removed
-        this.logger.debug('key removed', snapshotKey);
+        this.logger.debug('key removed', snapshotRefKey);
         hasUpdate = true;
         if (dryRun) return hasUpdate;
-        if (this.result && snapshotKey in this.result['data']) {
-          delete this.result['data'][snapshotKey];
+        if (this.result && snapshotRefKey in this.result['data']) {
+          delete this.result['data'][snapshotRefKey];
         }
-        if (this.subQueryListeners && snapshotKey in this.subQueryListeners) {
-          this.subQueryListeners[snapshotKey].unsubscribe();
-          delete this.subQueryListeners[snapshotKey];
+        if (
+          this.subQueryListeners &&
+          snapshotRefKey in this.subQueryListeners
+        ) {
+          this.subQueryListeners[snapshotRefKey].unsubscribe();
+          delete this.subQueryListeners[snapshotRefKey];
         }
       }
       if (
-        !prevSnapshotKeys.includes(snapshotKey) &&
-        newSnapshotKeys.includes(snapshotKey)
+        !prevSnapshotRefKeys.includes(snapshotRefKey) &&
+        newSnapshotRefKeys.includes(snapshotRefKey)
       ) {
         // key created
-        this.logger.debug('key created', snapshotKey);
+        this.logger.debug('key created', snapshotRefKey);
         hasUpdate = true;
         if (dryRun) return hasUpdate;
         if (this.result) {
-          this.result['data'][snapshotKey] = newSnapshot.data[snapshotKey];
+          this.result['data'][snapshotRefKey] =
+            newSnapshot.data[snapshotRefKey];
         }
-        if (snapshotKey in newQuery) {
-          const subQuery = makeSubQuery(newSnapshot, snapshotKey, newQuery);
-          this.createSubQueryListener(newSnapshot, snapshotKey, subQuery);
+        if (snapshotRefKey in newQuery) {
+          const subQuery = makeSubQuery(newSnapshot, snapshotRefKey, newQuery);
+          this.createSubQueryListener(newSnapshot, snapshotRefKey, subQuery);
         }
       }
       if (
-        prevSnapshotKeys.includes(snapshotKey) &&
-        newSnapshotKeys.includes(snapshotKey)
+        prevSnapshotRefKeys.includes(snapshotRefKey) &&
+        newSnapshotRefKeys.includes(snapshotRefKey)
       ) {
         // key not changed
-        this.logger.debug('key not changed', snapshotKey);
+        this.logger.debug('key not changed', snapshotRefKey);
         if (!dryRun && this.result) {
-          this.result['data'][snapshotKey] = newSnapshot.data[snapshotKey];
+          this.result['data'][snapshotRefKey] =
+            newSnapshot.data[snapshotRefKey];
         }
-        if (!(snapshotKey in prevQuery) && !(snapshotKey in newQuery)) {
+        if (!(snapshotRefKey in prevQuery) && !(snapshotRefKey in newQuery)) {
           // subQuery not exist
-          this.logger.debug('subQuery not exist', snapshotKey);
+          this.logger.debug('subQuery not exist', snapshotRefKey);
         }
-        if (snapshotKey in prevQuery && !(snapshotKey in newQuery)) {
+        if (snapshotRefKey in prevQuery && !(snapshotRefKey in newQuery)) {
           // subQuery removed
-          this.logger.debug('subQuery removed', snapshotKey);
+          this.logger.debug('subQuery removed', snapshotRefKey);
           hasUpdate = true;
           if (dryRun) return hasUpdate;
-          this.subQueryListeners[snapshotKey].unsubscribe();
-          delete this.subQueryListeners[snapshotKey];
+          this.subQueryListeners[snapshotRefKey].unsubscribe();
+          delete this.subQueryListeners[snapshotRefKey];
         }
-        if (!(snapshotKey in prevQuery) && snapshotKey in newQuery) {
+        if (!(snapshotRefKey in prevQuery) && snapshotRefKey in newQuery) {
           // subQuery created
-          this.logger.debug('subQuery created', snapshotKey);
+          this.logger.debug('subQuery created', snapshotRefKey);
           hasUpdate = true;
           if (dryRun) return hasUpdate;
-          const subQuery = makeSubQuery(newSnapshot, snapshotKey, newQuery);
-          this.createSubQueryListener(newSnapshot, snapshotKey, subQuery);
+          const subQuery = makeSubQuery(newSnapshot, snapshotRefKey, newQuery);
+          this.createSubQueryListener(newSnapshot, snapshotRefKey, subQuery);
         }
-        if (snapshotKey in prevQuery && snapshotKey in newQuery) {
+        if (snapshotRefKey in prevQuery && snapshotRefKey in newQuery) {
           // subQuery may modified
-          this.logger.debug('subQuery may modified', snapshotKey);
+          this.logger.debug('subQuery may modified', snapshotRefKey);
           const subQueryHasUpdate = this.updateSubQueryListener(
-            snapshotKey,
+            snapshotRefKey,
             prevSnapshot,
-            (prevQuery as any)[snapshotKey],
+            (prevQuery as any)[snapshotRefKey],
             newSnapshot,
-            (newQuery as any)[snapshotKey],
+            (newQuery as any)[snapshotRefKey],
             dryRun
           );
           if (subQueryHasUpdate) {
@@ -377,7 +391,7 @@ export class GraphQueryListener {
     const allSubQueryKeys = union(prevSubQueryKeys, newSubQueryKeys);
     for (const subQueryKey of allSubQueryKeys) {
       // skip not extension key
-      if (allSnapshotKeys.includes(subQueryKey)) {
+      if (allSnapshotRefKeys.includes(subQueryKey)) {
         continue;
       }
 
