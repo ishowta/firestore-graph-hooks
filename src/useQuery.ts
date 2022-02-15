@@ -9,15 +9,8 @@ import {
   JoinedDataInner,
   RefToDoc,
 } from './types';
-import loglevel, { getLogger } from 'loglevel';
-import { apply, reg } from 'loglevel-plugin-prefix';
+import { getLogger } from 'loglevel';
 
-reg(loglevel);
-apply(loglevel, {
-  format(level, name, timestamp) {
-    return `[${timestamp}] ${level} ${name}:`;
-  },
-});
 const logger = getLogger('useQuery');
 
 export function useRootQuery<Q extends GraphQuery<{}>>(
