@@ -275,8 +275,8 @@ export class GraphQueryListener {
     const newSnapshotKeys = Object.keys(newSnapshot);
     for (const snapshotKey of union(prevSnapshotKeys, newSnapshotKeys)) {
       if (
-        snapshotKey in prevSnapshotKeys &&
-        !(snapshotKey in newSnapshotKeys)
+        prevSnapshotKeys.includes(snapshotKey) &&
+        !newSnapshotKeys.includes(snapshotKey)
       ) {
         // key removed
         this.logger.debug('key removed');
@@ -291,8 +291,8 @@ export class GraphQueryListener {
         }
       }
       if (
-        !(snapshotKey in prevSnapshotKeys) &&
-        snapshotKey in newSnapshotKeys
+        !prevSnapshotKeys.includes(snapshotKey) &&
+        newSnapshotKeys.includes(snapshotKey)
       ) {
         // key created
         this.logger.debug('key created');
@@ -305,7 +305,10 @@ export class GraphQueryListener {
           this.createSubQueryListener(newSnapshot, snapshotKey, newQuery);
         }
       }
-      if (snapshotKey in prevSnapshotKeys && snapshotKey in newSnapshotKeys) {
+      if (
+        prevSnapshotKeys.includes(snapshotKey) &&
+        newSnapshotKeys.includes(snapshotKey)
+      ) {
         // key not changed
         if (!dryRun && this.result) {
           this.result['data'][snapshotKey] = newSnapshot.data[snapshotKey];
