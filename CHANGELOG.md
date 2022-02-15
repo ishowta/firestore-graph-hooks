@@ -1,3 +1,10 @@
+# [1.0.0-alpha.4](https://github.com/ishowta/firestore-join-hooks/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2022-02-15)
+
+
+### Bug Fixes
+
+* refresh result on update ([8424cfa](https://github.com/ishowta/firestore-join-hooks/commit/8424cfa384f1bd69333a5a5b056ac0fbde2d7a94))
+
 # [1.0.0-alpha.3](https://github.com/ishowta/firestore-join-hooks/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2022-02-15)
 
 
