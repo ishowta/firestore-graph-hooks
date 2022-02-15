@@ -66,7 +66,7 @@ export function useQuery<
   query: Q
 ): [JoinedData<Ref, Q, false> | undefined, boolean, Error | undefined] {
   const [value, loading, error] = useRootQuery({
-    base: ref ? field(ref, query) : undefined,
+    base: field(ref, query),
   });
 
   return [value?.base, loading, error];
@@ -80,8 +80,8 @@ export function field<
   ref: Ref,
   query: Q,
   guaranteedToExist?: GuaranteedToExist
-): undefined extends Ref
-  ? [Ref, Q, GuaranteedToExist] | undefined
-  : [Ref, Q, GuaranteedToExist] {
-  return ref ? [ref, query, guaranteedToExist] : (undefined as any);
+): never extends Ref // FIXME: ?????
+  ? [Ref, Q, GuaranteedToExist]
+  : never {
+  return [ref, query, (guaranteedToExist ?? false) as any]; // 妥協 具体的な型を指定されなければ矛盾は発生しない
 }

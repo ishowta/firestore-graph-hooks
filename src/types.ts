@@ -74,11 +74,11 @@ export type GraphQuery<T extends DocumentData> =
     } & {
       [K in Exclude<keyof T, PickRefField<T>>]?: never;
     }) & {
-      [K in string]: unknown | [AnyReference, unknown, boolean];
+      [K in string]: unknown | [AnyReference | undefined, unknown, boolean];
     })
   // extra fieldのみのクエリ
   | ({ [K in keyof T]?: never } & {
-      [K in string]: unknown | [AnyReference, unknown, boolean];
+      [K in string]: unknown | [AnyReference | undefined, unknown, boolean];
     })
   // ドキュメントを引数にとってクエリを返す関数
   | ((data: GraphDocumentSnapshot<T>) => GraphQuery<T>);
@@ -127,17 +127,19 @@ export type JoinedDataInner<
     [K in Exclude<
       keyof GraphQueryQueryType<T, Q>,
       keyof T
-    >]: GraphQueryQueryType<T, Q>[K] extends
-      | [infer Ref, infer UQuery, infer GuaranteedToExist]
-      | undefined
+    >]: GraphQueryQueryType<T, Q>[K] extends [
+      infer Ref,
+      infer UQuery,
+      infer GuaranteedToExist
+    ]
       ? GuaranteedToExist extends boolean
-        ? Ref extends AnyReference
+        ? Ref extends AnyReference | undefined
           ? UQuery extends Function
-            ? UQuery extends GraphQuery<RefToDoc<Ref>>
-              ? JoinedData<Ref, UQuery, GuaranteedToExist>
+            ? UQuery extends GraphQuery<RefToDoc<NonNullable<Ref>>>
+              ? JoinedData<NonNullable<Ref>, UQuery, GuaranteedToExist>
               : never
-            : Required<UQuery> extends GraphQuery<RefToDoc<Ref>>
-            ? JoinedData<Ref, Required<UQuery>, GuaranteedToExist>
+            : Required<UQuery> extends GraphQuery<RefToDoc<NonNullable<Ref>>>
+            ? JoinedData<NonNullable<Ref>, Required<UQuery>, GuaranteedToExist>
             : never
           : never
         : never
