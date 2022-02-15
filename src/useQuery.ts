@@ -24,6 +24,7 @@ export function useRootQuery<Q extends GraphQuery<{}>>(
   query: Q
 ): [Expand<JoinedDataInner<{}, Q>> | undefined, boolean, Error | undefined] {
   const [value, setValue] = useState<Expand<JoinedDataInner<{}, Q>>>();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestoreError>();
   const rootListener = useRef<GraphQueryListener>();
 
@@ -34,6 +35,7 @@ export function useRootQuery<Q extends GraphQuery<{}>>(
       (result) => {
         logger.debug('onUpdate', result);
         setValue(result.data);
+        setLoading(false);
       }
     );
     return () => {
@@ -42,20 +44,23 @@ export function useRootQuery<Q extends GraphQuery<{}>>(
   }, []);
 
   // dry run update query and get has loading
-  const loading = useMemo(() => {
-    if (rootListener.current) {
+  const immediateLoading = useMemo(() => {
+    if (!loading && rootListener.current) {
       return rootListener.current.updateQuery(query, true);
     }
-    return true;
+    return loading;
   }, [query]);
 
   useEffect(() => {
     if (rootListener.current) {
-      rootListener.current.updateQuery(query, false);
+      if (rootListener.current.updateQuery(query, false)) {
+        logger.debug('queryChanged');
+        setLoading(true);
+      }
     }
   }, [query]);
 
-  return [value, loading, error];
+  return [value, immediateLoading, error];
 }
 
 export function useQuery<
