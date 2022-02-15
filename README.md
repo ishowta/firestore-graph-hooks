@@ -30,6 +30,8 @@ export const App = () => {
 ## TODO
 
 - add test and fix
+- refactor
+  - distinguish GraphQuery and GraphQueryFactory
 - nested document data
 - better error handling
 - typing internal code
@@ -38,6 +40,5 @@ export const App = () => {
 - fragment query
 - flat query result structure mode
 - no restriction reference field name mode
-- refactor
 - documentation
 - add guaranteed to exist option to ref field like extension field
