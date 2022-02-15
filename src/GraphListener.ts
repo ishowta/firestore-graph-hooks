@@ -20,9 +20,9 @@ export interface GraphListener {
   loading: boolean;
 
   /**
-   * クエリを投げ、更新があるかどうかを返す
+   * クエリに更新があるかどうかを返す
    */
-  updateQuery(newQuery: GraphQuery<any>): boolean;
+  updateQuery(newQuery: GraphQuery<any>, dryRun: boolean): boolean;
 
   /**
    * サブクエリの購読を止める
@@ -78,7 +78,7 @@ export class GraphDocumentListener implements GraphListener {
       this.logger.debug('onSnapshot', snapshot);
       if (this.queryListener) {
         if (snapshot.exist) {
-          if (this.queryListener.updateSnapshot(snapshot)) {
+          if (this.queryListener.updateSnapshot(snapshot, false)) {
             onUpdate(this.queryListener.result);
           }
         } else {
@@ -100,11 +100,13 @@ export class GraphDocumentListener implements GraphListener {
     });
   }
 
-  updateQuery(newQuery: any): boolean {
-    this.logger.debug('updateQuery', newQuery);
-    this.query = newQuery;
+  updateQuery(newQuery: any, dryRun: boolean): boolean {
+    this.logger.debug('updateQuery', newQuery, dryRun);
+    if (!dryRun) {
+      this.query = newQuery;
+    }
     if (this.queryListener) {
-      return this.queryListener.updateQuery(newQuery);
+      return this.queryListener.updateQuery(newQuery, dryRun);
     } else {
       return false;
     }
@@ -224,7 +226,8 @@ export class GraphCollectionListener implements GraphListener {
           case 'modified':
             if (
               this.queryListeners[docChange.doc.ref.path].updateSnapshot(
-                snapshot
+                snapshot,
+                false
               )
             ) {
               onUpdateWithResult(
@@ -239,13 +242,16 @@ export class GraphCollectionListener implements GraphListener {
     });
   }
 
-  updateQuery(newQuery: any): boolean {
-    this.logger.debug('updateQuery', newQuery);
-    this.query = newQuery;
+  updateQuery(newQuery: any, dryRun: boolean): boolean {
+    this.logger.debug('updateQuery', newQuery, dryRun);
+    if (!dryRun) {
+      this.query = newQuery;
+    }
     if (this.queryListeners) {
       const hasUpdate = Object.values(this.queryListeners).some(
-        (queryListener) => queryListener.updateQuery(newQuery)
+        (queryListener) => queryListener.updateQuery(newQuery, dryRun)
       );
+      if (dryRun) return hasUpdate;
       if (hasUpdate) {
         this.loading = true;
       }

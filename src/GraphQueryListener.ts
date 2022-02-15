@@ -143,7 +143,8 @@ export class GraphQueryListener {
     prevSnapshot: GraphQueryDocumentSnapshot<any>,
     prevSubQueryFactory: any,
     newSnapshot: GraphQueryDocumentSnapshot<any>,
-    newSubQueryFactory: any
+    newSubQueryFactory: any,
+    dryRun: boolean
   ): boolean {
     const prevSubQuery = makeSubQuery(
       prevSnapshot,
@@ -162,7 +163,8 @@ export class GraphQueryListener {
       prevSnapshot,
       prevSubQuery,
       newSnapshot,
-      newSubQuery
+      newSubQuery,
+      dryRun
     );
 
     // compare ref
@@ -177,6 +179,7 @@ export class GraphQueryListener {
     } else if (prevSubQuery.ref != null && newSubQuery.ref == null) {
       // ref removed
       this.logger.debug('ref removed');
+      if (dryRun) return true;
       this.subQueryListeners[subQueryKey].unsubscribe();
       if (this.result) {
         delete this.result.data[subQueryKey];
@@ -185,7 +188,7 @@ export class GraphQueryListener {
     } else if (prevSubQuery.ref == null && newSubQuery.ref != null) {
       // ref created
       this.logger.debug('ref created');
-      this.createSubQueryListener(newSnapshot, subQueryKey, newSubQuery.query);
+      if (dryRun) return true;
       return true;
     } else if (
       (prevSubQuery.ref instanceof DocumentReference &&
@@ -195,6 +198,7 @@ export class GraphQueryListener {
     ) {
       // ref type changed
       this.logger.debug('ref type changed');
+      if (dryRun) return true;
       this.subQueryListeners[subQueryKey].unsubscribe();
       if (this.result) {
         delete this.result.data[subQueryKey];
@@ -211,6 +215,7 @@ export class GraphQueryListener {
     ) {
       // ref changed
       this.logger.debug('ref changed');
+      if (dryRun) return true;
       this.subQueryListeners[subQueryKey].unsubscribe();
       if (this.result) {
         delete this.result.data[subQueryKey];
@@ -220,34 +225,46 @@ export class GraphQueryListener {
     } else {
       // ref not changed
       this.logger.debug('ref not changed');
-      return this.subQueryListeners[subQueryKey].updateQuery(newSubQuery.query);
+      return this.subQueryListeners[subQueryKey].updateQuery(
+        newSubQuery.query,
+        dryRun
+      );
     }
   }
 
-  updateSnapshot(newSnapshot: GraphQueryDocumentSnapshot<any>) {
-    this.result = {
-      ...this.result,
-      ...newSnapshot,
-    };
-    this.logger.debug('updateSnapshot', newSnapshot, this.result);
-    return this.update(newSnapshot, this.queryFactory, true);
+  updateSnapshot(
+    newSnapshot: GraphQueryDocumentSnapshot<any>,
+    dryRun: boolean
+  ) {
+    if (!dryRun) {
+      this.result = {
+        ...this.result,
+        ...newSnapshot,
+      };
+    }
+    this.logger.debug('updateSnapshot', newSnapshot, this.result, dryRun);
+    return this.update(newSnapshot, this.queryFactory, true, dryRun);
   }
 
-  updateQuery(newQueryFactory: GraphQuery<any>) {
-    this.logger.debug('updateQuery', newQueryFactory);
-    return this.update(this.currentSnapshot, newQueryFactory, false);
+  updateQuery(newQueryFactory: GraphQuery<any>, dryRun: boolean) {
+    this.logger.debug('updateQuery', newQueryFactory, dryRun);
+    return this.update(this.currentSnapshot, newQueryFactory, false, dryRun);
   }
 
   private update(
     newSnapshot: GraphQueryDocumentSnapshot<any>,
     newQueryFactory: GraphQuery<any>,
-    hasUpdate: boolean
+    stillHasUpdate: boolean,
+    dryRun: boolean
   ): boolean {
+    let hasUpdate = stillHasUpdate;
     const prevSnapshot = this.currentSnapshot;
-    const prevQuery = this.makeQuery(this.currentSnapshot);
-    this.currentSnapshot = newSnapshot;
-    this.queryFactory = newQueryFactory;
-    const newQuery = this.makeQuery(this.currentSnapshot);
+    const prevQuery = this.makeQuery(this.currentSnapshot, this.queryFactory);
+    const newQuery = this.makeQuery(newSnapshot, newQueryFactory);
+    if (!dryRun) {
+      this.currentSnapshot = newSnapshot;
+      this.queryFactory = newQueryFactory;
+    }
     this.logger.debug('update', prevSnapshot, newSnapshot, prevQuery, newQuery);
 
     // - calc snapshot diff
@@ -264,6 +281,7 @@ export class GraphQueryListener {
         // key removed
         this.logger.debug('key removed');
         hasUpdate = true;
+        if (dryRun) return hasUpdate;
         if (this.result && snapshotKey in this.result['data']) {
           delete this.result['data'][snapshotKey];
         }
@@ -279,6 +297,7 @@ export class GraphQueryListener {
         // key created
         this.logger.debug('key created');
         hasUpdate = true;
+        if (dryRun) return hasUpdate;
         if (this.result) {
           this.result['data'][snapshotKey] = newSnapshot.data[snapshotKey];
         }
@@ -288,8 +307,7 @@ export class GraphQueryListener {
       }
       if (snapshotKey in prevSnapshotKeys && snapshotKey in newSnapshotKeys) {
         // key not changed
-        this.logger.debug('key not changed');
-        if (this.result) {
+        if (!dryRun && this.result) {
           this.result['data'][snapshotKey] = newSnapshot.data[snapshotKey];
         }
         if (!(snapshotKey in prevQuery) && !(snapshotKey in newQuery)) {
@@ -300,6 +318,7 @@ export class GraphQueryListener {
           // subQuery removed
           this.logger.debug('subQuery removed');
           hasUpdate = true;
+          if (dryRun) return hasUpdate;
           this.subQueryListeners[snapshotKey].unsubscribe();
           delete this.subQueryListeners[snapshotKey];
         }
@@ -307,7 +326,7 @@ export class GraphQueryListener {
           // subQuery created
           this.logger.debug('subQuery created');
           hasUpdate = true;
-          this.createSubQueryListener(newSnapshot, snapshotKey, newQuery);
+          if (dryRun) return hasUpdate;
         }
         if (snapshotKey in prevQuery && snapshotKey in newQuery) {
           // subQuery may modified
@@ -315,7 +334,18 @@ export class GraphQueryListener {
           const subQueryHasUpdate = this.updateSubQueryListener(
             snapshotKey,
             prevSnapshot,
-            prevQuery,
+            (prevQuery as any)[snapshotKey],
+            newSnapshot,
+            (newQuery as any)[snapshotKey],
+            dryRun
+          );
+          if (subQueryHasUpdate) {
+            hasUpdate = true;
+            if (dryRun) return hasUpdate;
+          }
+        }
+      }
+    }
             newSnapshot,
             newQuery
           );

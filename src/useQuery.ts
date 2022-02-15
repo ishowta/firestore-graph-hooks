@@ -41,11 +41,18 @@ export function useRootQuery<Q extends GraphQuery<{}>>(
     };
   }, []);
 
+  // dry run update query and get has loading
   const loading = useMemo(() => {
     if (rootListener.current) {
-      return rootListener.current.updateQuery(query);
+      return rootListener.current.updateQuery(query, true);
     }
     return true;
+  }, [query]);
+
+  useEffect(() => {
+    if (rootListener.current) {
+      rootListener.current.updateQuery(query, false);
+    }
   }, [query]);
 
   return [value, loading, error];
