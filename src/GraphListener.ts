@@ -78,9 +78,8 @@ export class GraphDocumentListener implements GraphListener {
       this.logger.debug('onSnapshot', snapshot);
       if (this.queryListener) {
         if (snapshot.exist) {
-          if (this.queryListener.updateSnapshot(snapshot, false)) {
-            onUpdate(this.queryListener.result);
-          }
+          this.queryListener.updateSnapshot(snapshot, false);
+          onUpdate(this.queryListener.result);
         } else {
           onUpdate(undefined);
         }
@@ -179,6 +178,7 @@ export class GraphCollectionListener implements GraphListener {
       }
 
       this.result[docIndex] = result;
+      this.result = [...this.result];
 
       onUpdate();
     };
@@ -201,8 +201,8 @@ export class GraphCollectionListener implements GraphListener {
             break;
           case 'modified':
             if (docChange.oldIndex !== docChange.newIndex) {
-              const temp = this.result.splice(docChange.oldIndex, 1);
-              this.result = insert(this.result, temp[0], docChange.newIndex);
+              const temp = this.result.splice(docChange.oldIndex, 1)[0];
+              this.result = insert(this.result, temp, docChange.newIndex);
             }
             break;
         }
@@ -224,17 +224,14 @@ export class GraphCollectionListener implements GraphListener {
             this.queryListeners[docChange.doc.ref.path].unsubscribe();
             break;
           case 'modified':
-            if (
-              this.queryListeners[docChange.doc.ref.path].updateSnapshot(
-                snapshot,
-                false
-              )
-            ) {
-              onUpdateWithResult(
-                docChange.doc.ref.path,
-                this.queryListeners[docChange.doc.ref.path].result
-              );
-            }
+            this.queryListeners[docChange.doc.ref.path].updateSnapshot(
+              snapshot,
+              false
+            );
+            onUpdateWithResult(
+              docChange.doc.ref.path,
+              this.queryListeners[docChange.doc.ref.path].result
+            );
             break;
         }
       }

@@ -44,3 +44,5 @@ export const App = () => {
 - no restriction reference field name mode
 - documentation
 - add guaranteed to exist option to ref field like extension field
+- performance
+  - keep unchanged field
