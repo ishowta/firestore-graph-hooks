@@ -82,7 +82,7 @@ export class GraphDocumentListener implements GraphListener {
             onUpdate(this.queryListener.result);
           }
         } else {
-          this.queryListener.unsubscribe();
+          onUpdate(undefined);
         }
       } else {
         if (snapshot.exist) {
