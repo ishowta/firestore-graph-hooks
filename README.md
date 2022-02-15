@@ -29,7 +29,9 @@ export const App = () => {
 
 ## TODO
 
-- add test and fix
+- fix bug
+  - should loading variable turn to true when onSnapshot
+- add tests
 - refactor
   - distinguish GraphQuery and GraphQueryFactory
 - nested document data
