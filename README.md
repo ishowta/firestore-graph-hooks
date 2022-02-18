@@ -46,3 +46,4 @@ export const App = () => {
 - add guaranteed to exist option to ref field like extension field
 - performance
   - keep unchanged field
+- support class(withConverter)?
