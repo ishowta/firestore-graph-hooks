@@ -1,49 +1,81 @@
-import { FirestoreError } from 'firebase/firestore';
+import {
+  CollectionReference,
+  DocumentReference,
+  FirestoreError,
+} from 'firebase/firestore';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Expand } from './utils';
 import { GraphQueryListener } from './GraphQueryListener';
 import {
   AnyReference,
+  DocumentData,
   GraphQuery,
-  JoinedData,
-  JoinedDataInner,
+  GraphSnapshotQueryResult,
+  GraphQueryResult,
   RefToDoc,
+  GraphQueryGenerator,
+  GraphQueryDocumentSnapshot,
 } from './types';
 import { getLogger } from 'loglevel';
 
 const logger = getLogger('useQuery');
 
-export function useRootQuery<Q extends GraphQuery<{}>>(
+type Root = {};
+
+export function useRootQuery<Q extends GraphQuery<Root>>(
   query: Q
-): [Expand<JoinedDataInner<{}, Q>> | undefined, boolean, Error | undefined] {
-  const [value, setValue] = useState<Expand<JoinedDataInner<{}, Q>>>();
+): [
+  Expand<GraphQueryResult<DocumentReference<Root>, Q>> | undefined,
+  boolean,
+  Error | undefined
+] {
+  const [value, setValue] =
+    useState<Expand<GraphQueryResult<DocumentReference<Root>, Q>>>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestoreError>();
-  const rootListener = useRef<GraphQueryListener>();
+  const rootListener =
+    useRef<GraphQueryListener<Root, DocumentReference<Root>, Q>>();
 
+  /**
+   * initialize rootListener {@link GraphQueryListener}
+   */
   useEffect(() => {
     rootListener.current = new GraphQueryListener(
-      { data: {}, id: '', ref: { path: '' } } as any,
+      {
+        data: {},
+        id: '',
+        ref: { path: '' },
+      } as GraphQueryDocumentSnapshot<Root>,
       query,
       (result) => {
         logger.debug('onUpdate', result);
         setValue(result.data);
         setLoading(false);
+      },
+      (error) => {
+        setError(error);
       }
     );
     return () => {
       rootListener.current?.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // dry run update query and get has loading
+  /**
+   * dry run {@link rootListener.current.updateQuery update query} when query may changed, and get has loading
+   */
   const immediateLoading = useMemo(() => {
     if (!loading && rootListener.current) {
       return rootListener.current.updateQuery(query, true);
     }
     return loading;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
+  /**
+   * watch query updates
+   */
   useEffect(() => {
     if (rootListener.current) {
       if (rootListener.current.updateQuery(query, false)) {
@@ -57,29 +89,31 @@ export function useRootQuery<Q extends GraphQuery<{}>>(
 }
 
 export function useQuery<
-  Ref extends AnyReference,
-  Q extends GraphQuery<RefToDoc<Ref>>
+  Ref extends AnyReference<DocumentData>,
+  Q extends GraphQuery<RefToDoc<Ref>> | GraphQueryGenerator<Ref>
 >(
   ref: Ref | undefined,
   query: Q
-): [JoinedData<Ref, Q, false> | undefined, boolean, Error | undefined] {
+): [
+  GraphSnapshotQueryResult<Ref, Q, false> | undefined,
+  boolean,
+  Error | undefined
+] {
   const [value, loading, error] = useRootQuery({
-    base: field(ref, query),
+    base: field<Ref, Q, false>(ref, query),
   });
 
   return [value?.base, loading, error];
 }
 
 export function field<
-  Ref extends AnyReference | undefined,
-  Q extends GraphQuery<RefToDoc<NonNullable<Ref>>>,
+  Ref extends AnyReference<DocumentData>,
+  Q extends GraphQuery<RefToDoc<Ref>> | GraphQueryGenerator<Ref>,
   GuaranteedToExist extends boolean = false
 >(
-  ref: Ref,
+  ref: Ref | undefined,
   query: Q,
   guaranteedToExist?: GuaranteedToExist
-): never extends Ref // FIXME: ?????
-  ? [Ref, Q, GuaranteedToExist]
-  : never {
-  return [ref, query, (guaranteedToExist ?? false) as any]; // 妥協 具体的な型を指定されなければ矛盾は発生しない
+): [Ref | undefined, Q, GuaranteedToExist] {
+  return [ref, query, (guaranteedToExist ?? false) as any]; // Compromise. No contradiction unless a type is specified
 }

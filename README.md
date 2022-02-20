@@ -31,12 +31,10 @@ export const App = () => {
 
 - fix bug
   - should loading variable turn to true when onSnapshot
+  - do not use path as key
 - add tests
-- refactor
-  - distinguish GraphQuery and GraphQueryFactory
 - nested document data
-- better error handling
-- typing internal code
+- error handling
 - more strict types
 - snapshot option
 - fragment query
@@ -46,3 +44,6 @@ export const App = () => {
 - add guaranteed to exist option to ref field like extension field
 - performance
   - keep unchanged field
+- better error handling
+- internal typing strictly
+  - subquery k/v type

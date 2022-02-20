@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/rules-of-hooks */
 
-import { Firestore } from 'firebase/firestore';
+import { CollectionReference, Firestore } from 'firebase/firestore';
 import {
   CollectionMetadata,
   GraphDocumentSnapshot,
   GraphQueryDocumentSnapshot,
+  GraphQueryResult,
   WithCollectionMetadata,
 } from '../src/types';
 import { field, useQuery, useRootQuery } from '../src/useQuery';
-import { assertType, Equal } from '../src/utils';
+import { assertType, Equal, Expand } from '../src/utils';
 import {
   getKanbanOrder,
   getKanbans,
@@ -25,6 +26,8 @@ import {
   TODOList,
   User,
 } from './schema';
+
+type Test = Expand<GraphQueryResult<CollectionReference<Project>, {}>>;
 
 const types = () => {
   let firestore: Firestore = {} as any;

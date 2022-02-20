@@ -6,8 +6,7 @@ export type PickOptional<T> = {
 
 export type SelectiveOptional<T, K extends string | number | symbol> = Partial<
   Pick<T, K & keyof T>
-> &
-  Omit<T, K & keyof T>;
+> & { [P in Exclude<keyof T, K>]: T[P] };
 
 // https://github.com/microsoft/TypeScript/issues/27024
 
