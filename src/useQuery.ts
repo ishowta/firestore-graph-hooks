@@ -19,6 +19,15 @@ import {
 } from './types';
 import { getLogger } from 'loglevel';
 
+export type {
+  GraphQuery,
+  GraphQueryGenerator,
+  GraphQueryResult,
+  GraphDocumentSnapshot,
+  GraphQueryDocumentSnapshot,
+  GraphSnapshotQueryResult,
+} from './types';
+
 const logger = getLogger('useQuery');
 
 type Root = {};
