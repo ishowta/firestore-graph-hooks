@@ -198,7 +198,7 @@ export class GraphCollectionListener<
     this.queryListeners = {};
 
     const onUpdate = () => {
-      this.logger.debug('onUpdate');
+      this.logger.debug('onUpdate', this.result);
 
       this.logger.debug(
         `${
