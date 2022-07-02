@@ -128,6 +128,7 @@ export class GraphDocumentListener<
       if (this.queryListener) {
         if (snapshot.exist) {
           this.queryListener.updateSnapshot(snapshot, false);
+          onUpdate(this.queryListener.result as any);
         } else {
           onUpdate(snapshot);
         }
@@ -278,6 +279,10 @@ export class GraphCollectionListener<
             this.queryListeners[docChange.doc.ref.path].updateSnapshot(
               snapshot,
               false
+            );
+            onUpdateWithResult(
+              docChange.doc.ref.path,
+              this.queryListeners[docChange.doc.ref.path].result as any
             );
             break;
         }
