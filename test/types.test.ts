@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/rules-of-hooks */
 
+import { doc } from 'firebase/firestore';
 import {
   CollectionMetadata,
   GraphDocumentSnapshot,
@@ -36,6 +37,7 @@ const types = () => {
       }),
     }),
     kanbans: field(getKanbans(project.ref), {}),
+    currentKanban: field(doc(getKanbans(project.ref), 'current'), {}),
   }));
 
   const [query2] = useRootQuery({
@@ -96,6 +98,7 @@ type ExpectSampleProjects = CollectionMetadata<Project> &
       >;
       kanbans: CollectionMetadata<Kanban> &
         GraphQueryDocumentSnapshotWithQueryResult<Kanban, {}>[];
+      currentKanban: GraphDocumentSnapshotWithQueryResult<Kanban, {}>;
     }
   >[];
 type ExpectSampleOwner = ExpectSampleProjects[number]['data']['owner'];

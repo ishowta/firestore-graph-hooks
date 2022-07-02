@@ -82,7 +82,7 @@ export function useRootQuery<Q extends GraphQuery<Root>>(
     }
     return loading;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [query, loading]);
 
   /**
    * watch query updates
@@ -140,7 +140,7 @@ export function useQuery<
 
   const immediateLoading = useMemo(() => {
     if (!loading) {
-      return ref == null || _ref == null || refEqual(ref as any, _ref as any);
+      return ref == null || _ref == null || !refEqual(ref as any, _ref as any);
     }
     return loading;
     // eslint-disable-next-line react-hooks/exhaustive-deps
