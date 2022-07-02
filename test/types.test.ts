@@ -27,6 +27,8 @@ import {
   User,
 } from './schema';
 
+declare const random: boolean;
+
 const types = () => {
   const [test] = useQuery(getProjects(), (project) => ({}));
 
@@ -37,7 +39,11 @@ const types = () => {
       }),
     }),
     kanbans: field(getKanbans(project.ref), {}),
-    currentKanban: field(doc(getKanbans(project.ref), 'current'), {}),
+    currentKanban: field(
+      random ? undefined : doc(getKanbans(project.ref), 'current'),
+      {},
+      true
+    ),
   }));
 
   const [query2] = useRootQuery({
@@ -75,6 +81,7 @@ type SampleOwnerNP = NonNullable<
   SampleProjects[number]['data']['owner']['data']
 >['nowPlaying'];
 type SampleKanban = SampleProjects[number]['data']['kanbans'][number];
+type SampleCurrentKanban = SampleProjects[number]['data']['currentKanban'];
 
 type Query2ResultType = NonNullable<ReturnType<typeof types>[1]>;
 
@@ -98,7 +105,9 @@ type ExpectSampleProjects = CollectionMetadata<Project> &
       >;
       kanbans: CollectionMetadata<Kanban> &
         GraphQueryDocumentSnapshotWithQueryResult<Kanban, {}>[];
-      currentKanban: GraphDocumentSnapshotWithQueryResult<Kanban, {}>;
+      currentKanban:
+        | undefined
+        | GraphQueryDocumentSnapshotWithQueryResult<Kanban, {}>;
     }
   >[];
 type ExpectSampleOwner = ExpectSampleProjects[number]['data']['owner'];
@@ -107,6 +116,8 @@ type ExpectSampleOwnerNP = NonNullable<
 >['nowPlaying'];
 type ExpectSampleKanban =
   ExpectSampleProjects[number]['data']['kanbans'][number];
+type ExpectSampleCurrentKanban =
+  ExpectSampleProjects[number]['data']['currentKanban'];
 
 declare let expected: ExpectSampleProjects;
 
@@ -120,6 +131,7 @@ test('useQuery return type', () => {
   assertType<Equal<SampleOwner, ExpectSampleOwner>>();
   assertType<Equal<SampleOwnerNP, ExpectSampleOwnerNP>>();
   assertType<Equal<SampleKanban, ExpectSampleKanban>>();
+  assertType<Equal<SampleCurrentKanban, ExpectSampleCurrentKanban>>();
   assertType<Equal<Query2ResultType, ExpectQuery2Type>>();
   assertType<Equal<SampleKanban, GraphQueryDocumentSnapshot<Kanban>>>();
 });

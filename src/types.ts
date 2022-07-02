@@ -193,35 +193,39 @@ export type GraphQueryResult<
       T,
       Q
     >[K] extends [infer SubQueryRef, infer SubQuery, infer GuaranteedToExist]
-      ? GuaranteedToExist extends boolean
-        ? NonNullable<SubQueryRef> extends DocumentReference<infer U>
-          ? U extends DocumentData
-            ? SubQuery extends
-                | GraphQuery<U>
-                | GraphQueryGenerator<DocumentReference<U>>
-              ? GraphSnapshotQueryResult<
-                  U,
-                  DocumentReference<U>,
-                  SubQuery,
-                  GuaranteedToExist
-                >
-              : never
-            : never
-          : NonNullable<SubQueryRef> extends
-              | CollectionReference<infer U>
-              | Query<infer U>
-          ? U extends DocumentData
-            ? SubQuery extends GraphQuery<U> | GraphQueryGenerator<Query<U>>
-              ? GraphSnapshotQueryResult<
-                  U,
-                  Query<U>,
-                  SubQuery,
-                  GuaranteedToExist
-                >
-              : never
-            : never
-          : never
-        : never
+      ?
+          | (undefined extends SubQueryRef ? undefined : never)
+          | (GuaranteedToExist extends boolean
+              ? NonNullable<SubQueryRef> extends DocumentReference<infer U>
+                ? U extends DocumentData
+                  ? SubQuery extends
+                      | GraphQuery<U>
+                      | GraphQueryGenerator<DocumentReference<U>>
+                    ? GraphSnapshotQueryResult<
+                        U,
+                        DocumentReference<U>,
+                        SubQuery,
+                        GuaranteedToExist
+                      >
+                    : never
+                  : never
+                : NonNullable<SubQueryRef> extends
+                    | CollectionReference<infer U>
+                    | Query<infer U>
+                ? U extends DocumentData
+                  ? SubQuery extends
+                      | GraphQuery<U>
+                      | GraphQueryGenerator<Query<U>>
+                    ? GraphSnapshotQueryResult<
+                        U,
+                        Query<U>,
+                        SubQuery,
+                        GuaranteedToExist
+                      >
+                    : never
+                  : never
+                : never
+              : never)
       : never;
   },
   keyof PickOptional<T> | keyof PickOptional<GetQueryType<T, Q>>

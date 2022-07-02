@@ -150,13 +150,15 @@ export function useQuery<
 }
 
 export function field<
-  Ref extends AnyReference<DocumentData>,
-  Q extends GraphQuery<RefToDoc<Ref>> | GraphQueryGenerator<Ref>,
+  Ref extends AnyReference<DocumentData> | undefined,
+  Q extends
+    | GraphQuery<RefToDoc<NonNullable<Ref>>>
+    | GraphQueryGenerator<NonNullable<Ref>>,
   GuaranteedToExist extends boolean = false
 >(
-  ref: Ref | undefined,
+  ref: Ref,
   query: Q,
   guaranteedToExist?: GuaranteedToExist
-): [Ref | undefined, Q, GuaranteedToExist] {
+): [Ref, Q, GuaranteedToExist] {
   return [ref, query, (guaranteedToExist ?? false) as GuaranteedToExist]; // Compromise. No contradiction unless a type is specified
 }
