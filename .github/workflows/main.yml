@@ -8,11 +8,16 @@ jobs:
     strategy:
       matrix:
         node: ['14.x', '16.x']
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest]
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
+
+      - name: Install package manager
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
 
       - name: Use Node ${{ matrix.node }}
         uses: actions/setup-node@v2
@@ -20,16 +25,16 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Install deps and build (with cache)
-        uses: bahmutov/npm-install@v1
-
-      - name: Lint
-        run: yarn lint
-
-      - name: Test
-        run: yarn test:ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: yarn build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test:ci
+
+      - name: Lint
+        run: pnpm lint
 
       - name: Release
         if: matrix.node == '16.x' && matrix.os == 'ubuntu-latest'
