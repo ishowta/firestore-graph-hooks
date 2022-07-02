@@ -1,15 +1,25 @@
 module.exports = {
   extends: [
-    './node_modules/dts-cli/conf/eslint-config-react-app/index.js',
+    'eslint:recommended',
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
+    'plugin:@typescript-eslint/recommended',
+    //'plugin:@typescript-eslint/recommended-requiring-type-checking',
     'prettier',
-    'plugin:prettier/recommended',
   ],
   rules: {
-    'array-callback-return': 'off', // false positive
+    '@typescript-eslint/ban-types': 'off',
+    //'@typescript-eslint/strict-boolean-expressions': 'error',
+    '@typescript-eslint/switch-exhaustiveness-check': 'error',
+  },
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    project: './tsconfig.json',
   },
   settings: {
     react: {
       version: 'detect',
     },
   },
+  ignorePatterns: ['/*.js'],
 };

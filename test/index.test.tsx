@@ -1,6 +1,6 @@
 import { generateSeed } from './seed';
 import { field } from '../';
-import { getKanbans, getProjects, getTodoLists } from './schema';
+import { getKanbans, getProjects, getTodoLists, Project } from './schema';
 import {
   DocumentReference,
   orderBy,
@@ -11,6 +11,7 @@ import {
 import { makeGraphListener } from '../src/GraphListener';
 import Channel from '@nodeguy/channel';
 import traverse from 'traverse';
+import { GraphDocumentSnapshot } from '../src/types';
 
 beforeAll(async () => {
   await generateSeed();
@@ -21,7 +22,7 @@ test('makeGraphListener', async () => {
 
   makeGraphListener(
     query(getProjects(), orderBy('createdAt')),
-    (project: any) => ({
+    (project: GraphDocumentSnapshot<Project>) => ({
       ownerRef: {
         nowPlayingRef: {},
       },
@@ -38,7 +39,9 @@ test('makeGraphListener', async () => {
     (result) => {
       queryChannel.push(result);
     },
-    () => {}
+    (error) => {
+      throw error;
+    }
   );
 
   const res = await queryChannel.shift();

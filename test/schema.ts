@@ -4,8 +4,7 @@ import {
   doc,
   DocumentReference,
   Timestamp,
-} from '@firebase/firestore';
-import { Firestore } from 'firebase/firestore';
+} from 'firebase/firestore';
 import { firestore } from './firebase';
 
 export type Second = number & {};

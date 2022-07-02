@@ -3,4 +3,7 @@ module.exports = {
   moduleNameMapper: {
     '^lodash-es$': 'lodash',
   },
+  transform: {
+    '^.+\\.(ts|tsx)$': 'ts-jest',
+  },
 };

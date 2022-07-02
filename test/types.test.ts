@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/rules-of-hooks */
 
-import { Firestore } from 'firebase/firestore';
 import {
   CollectionMetadata,
   GraphDocumentSnapshot,
@@ -22,12 +21,10 @@ import {
   Kanban,
   Project,
   TODO,
-  TODOList,
   User,
 } from './schema';
 
 const types = () => {
-  let firestore: Firestore = {} as any;
   let [projects] = useQuery(getProjects(), (project) => ({
     ownerRef: (_user) => ({
       nowPlayingRef: (todo) => ({
@@ -37,12 +34,12 @@ const types = () => {
     kanbans: field(getKanbans(project.ref), {}),
   }));
 
-  let [query2] = useRootQuery({
+  const [query2] = useRootQuery({
     users: field(getUsers(), {}),
     projects: field(getProjects(), {}),
   });
 
-  let [q3] = useQuery(getProjects(), (project) => ({
+  const [q3] = useQuery(getProjects(), (project) => ({
     kanbanOrder: field(getKanbanOrder(project.ref), {}),
     kanbans: field(getKanbans(project.ref), (kanban) => ({
       todoListOrder: field(getTODOListOrder(kanban.ref), {}),
@@ -53,11 +50,10 @@ const types = () => {
     })),
   }));
 
-  let expected: ExpectProjectsType = {} as any;
   projects = expected;
   expected = projects;
 
-  let raw: GraphQueryDocumentSnapshot<Project>[] = projects;
+  const raw: GraphQueryDocumentSnapshot<Project>[] = projects;
 
   return [projects, query2, q3] as const;
 };
@@ -91,6 +87,8 @@ type ExpectProjectsType = CollectionMetadata<Project> &
         })[];
     };
   })[];
+
+declare let expected: ExpectProjectsType;
 
 type ExpectQuery2Type = {
   users: WithCollectionMetadata<User>;
