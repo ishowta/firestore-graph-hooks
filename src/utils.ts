@@ -1,4 +1,4 @@
-import { getLogger } from 'loglevel';
+import { getLogger, Logger } from 'loglevel';
 
 export type PickOptional<T> = {
   [K in keyof T as {} extends Pick<T, K> ? K : never]-?: T[K];
@@ -39,5 +39,5 @@ export const insert = <T>(arr: T[], value: T, index: number): T[] => {
 };
 
 export const getObjectLogger = (object: Object, name: string) => {
-  return getLogger(`${object.constructor.name}[${name}]`);
+  return getLogger(`${object.constructor.name.padStart(30)}[${name}]`);
 };
