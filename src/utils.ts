@@ -6,8 +6,7 @@ export type PickOptional<T> = {
 
 export type SelectiveOptional<T, K extends string | number | symbol> = Partial<
   Pick<T, K & keyof T>
-> &
-  Omit<T, K & keyof T>;
+> & { [P in Exclude<keyof T, K>]: T[P] };
 
 // https://github.com/microsoft/TypeScript/issues/27024
 
@@ -23,9 +22,9 @@ export type Equal<X, Y> = unknown extends X & Y
   ? EqualsFromCompiler<X, Y>
   : EqualsFromExtends<X, Y>;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
 export function assertType<_T extends true>() {}
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
 export function assertNotType<_T extends false>() {}
 
 export type RequiredPrimitive<T> = T extends infer U | undefined ? U : T;

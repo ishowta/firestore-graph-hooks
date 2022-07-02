@@ -4,7 +4,9 @@
 import {
   CollectionMetadata,
   GraphDocumentSnapshot,
+  GraphDocumentSnapshotWithQueryResult,
   GraphQueryDocumentSnapshot,
+  GraphQueryDocumentSnapshotWithQueryResult,
   WithCollectionMetadata,
 } from '../src/types';
 import { field, useQuery, useRootQuery } from '../src/useQuery';
@@ -25,6 +27,8 @@ import {
 } from './schema';
 
 const types = () => {
+  const [test] = useQuery(getProjects(), (project) => ({}));
+
   let [projects] = useQuery(getProjects(), (project) => ({
     ownerRef: (_user) => ({
       nowPlayingRef: (todo) => ({
@@ -63,32 +67,45 @@ export type Q3Kanban = Q3Project['data']['kanbans'][number];
 export type Q3TODOList = Q3Kanban['data']['todoLists'][number];
 export type Q3TODO = Q3TODOList['data']['todos'][number];
 
-type ManuelaProjects = NonNullable<ReturnType<typeof types>[0]>;
-type ManuelaOwner = ManuelaProjects[number]['data']['owner'];
-type ManuelaKanban = ManuelaProjects[number]['data']['kanbans'][number];
+type SampleProjects = NonNullable<ReturnType<typeof types>[0]>;
+type SampleOwner = SampleProjects[number]['data']['owner'];
+type SampleOwnerNP = NonNullable<
+  SampleProjects[number]['data']['owner']['data']
+>['nowPlaying'];
+type SampleKanban = SampleProjects[number]['data']['kanbans'][number];
 
 type Query2ResultType = NonNullable<ReturnType<typeof types>[1]>;
 
-type ExpectProjectsType = CollectionMetadata<Project> &
-  (GraphQueryDocumentSnapshot<Project> & {
-    data: {
-      owner: GraphDocumentSnapshot<User> & {
-        data: {
-          nowPlaying: GraphDocumentSnapshot<TODO> & {
-            data: {
-              extraOnlyTestField: GraphDocumentSnapshot<TODO>;
-            };
-          };
-        };
-      };
+type ExpectSampleProjects = CollectionMetadata<Project> &
+  GraphQueryDocumentSnapshotWithQueryResult<
+    Project,
+    {
+      owner: GraphDocumentSnapshotWithQueryResult<
+        User,
+        {
+          nowPlaying: GraphDocumentSnapshotWithQueryResult<
+            TODO,
+            {
+              extraOnlyTestField: GraphDocumentSnapshotWithQueryResult<
+                TODO,
+                {}
+              >;
+            }
+          >;
+        }
+      >;
       kanbans: CollectionMetadata<Kanban> &
-        (GraphQueryDocumentSnapshot<Kanban> & {
-          data: {};
-        })[];
-    };
-  })[];
+        GraphQueryDocumentSnapshotWithQueryResult<Kanban, {}>[];
+    }
+  >[];
+type ExpectSampleOwner = ExpectSampleProjects[number]['data']['owner'];
+type ExpectSampleOwnerNP = NonNullable<
+  ExpectSampleProjects[number]['data']['owner']['data']
+>['nowPlaying'];
+type ExpectSampleKanban =
+  ExpectSampleProjects[number]['data']['kanbans'][number];
 
-declare let expected: ExpectProjectsType;
+declare let expected: ExpectSampleProjects;
 
 type ExpectQuery2Type = {
   users: WithCollectionMetadata<User>;
@@ -96,21 +113,26 @@ type ExpectQuery2Type = {
 };
 
 test('useQuery return type', () => {
-  assertType<Equal<ManuelaProjects, ExpectProjectsType>>();
+  assertType<Equal<SampleProjects, ExpectSampleProjects>>();
+  assertType<Equal<SampleOwner, ExpectSampleOwner>>();
+  assertType<Equal<SampleOwnerNP, ExpectSampleOwnerNP>>();
+  assertType<Equal<SampleKanban, ExpectSampleKanban>>();
   assertType<Equal<Query2ResultType, ExpectQuery2Type>>();
-  assertType<Equal<ManuelaKanban, GraphQueryDocumentSnapshot<Kanban>>>();
+  assertType<Equal<SampleKanban, GraphQueryDocumentSnapshot<Kanban>>>();
 });
 
 test('useQuery return type subtyping', () => {
   // query result <: original document
   assertType<
-    ManuelaProjects extends GraphQueryDocumentSnapshot<Project>[] ? true : false
+    SampleProjects extends GraphQueryDocumentSnapshot<Project>[] ? true : false
   >();
   assertType<
-    ManuelaProjects[number]['data']['owner']['data'] extends User ? true : false
+    NonNullable<SampleProjects[number]['data']['owner']['data']> extends User
+      ? true
+      : false
   >();
   assertType<
-    ManuelaProjects[number]['data']['kanbans'] extends GraphQueryDocumentSnapshot<Kanban>[]
+    SampleProjects[number]['data']['kanbans'] extends GraphQueryDocumentSnapshot<Kanban>[]
       ? true
       : false
   >();

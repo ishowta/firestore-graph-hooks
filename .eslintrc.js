@@ -21,5 +21,5 @@ module.exports = {
       version: 'detect',
     },
   },
-  ignorePatterns: ['/*.js'],
+  ignorePatterns: ['/*.js', '/example/*.js'],
 };

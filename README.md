@@ -30,13 +30,12 @@ export const App = () => {
 ## TODO
 
 - fix bug
+  - result do not update on loading
   - should loading variable turn to true when onSnapshot
+  - do not use path as key
 - add tests
-- refactor
-  - distinguish GraphQuery and GraphQueryFactory
 - nested document data
-- better error handling
-- typing internal code
+- error handling
 - more strict types
 - snapshot option
 - fragment query
@@ -47,3 +46,5 @@ export const App = () => {
 - performance
   - keep unchanged field
 - support class(withConverter)?
+- internal typing strictly
+  - subquery k/v type

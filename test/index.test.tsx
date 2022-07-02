@@ -22,7 +22,7 @@ test('makeGraphListener', async () => {
 
   makeGraphListener(
     query(getProjects(), orderBy('createdAt')),
-    (project: GraphDocumentSnapshot<Project>) => ({
+    (project) => ({
       ownerRef: {
         nowPlayingRef: {},
       },
