@@ -3,7 +3,6 @@ import {
   initializeFirestore,
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
-import {} from 'firebase/firestore';
 
 export const app = initializeApp({
   projectId: 'demo-firebase-graph-hooks',
