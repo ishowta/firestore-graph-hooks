@@ -111,138 +111,121 @@ export type GraphQueryGenerator<Ref extends AnyReference<DocumentData>> =
     : never;
 
 export type GetQueryType<
-  Ref extends AnyReference<DocumentData>,
-  Q extends GraphQuery<RefToDoc<Ref>> | GraphQueryGenerator<Ref>
-> = Q extends GraphQuery<RefToDoc<Ref>>
+  T extends DocumentData,
+  Ref extends AnyReference<T>,
+  Q extends GraphQuery<T> | GraphQueryGenerator<Ref>
+> = Q extends GraphQuery<T>
   ? Q
   : Q extends GraphQueryGenerator<Ref>
-  ? ReturnType<Q> extends GraphQuery<RefToDoc<Ref>>
+  ? ReturnType<Q> extends GraphQuery<T>
     ? ReturnType<Q>
     : never
   : never;
 
 export type GraphQueryResult<
-  Ref extends AnyReference<DocumentData>,
-  Q extends GraphQuery<RefToDoc<Ref>> | GraphQueryGenerator<Ref>
-> = Ref extends
-  | DocumentReference<infer T>
-  | CollectionReference<infer T>
-  | Query<infer T>
-  ? T extends DocumentData
-    ? SelectiveOptional<
-        {
-          /**
-           * ドキュメントのもともとのフィールド
-           */
-          [K in Exclude<keyof T, keyof GetQueryType<Ref, Q>>]: T[K];
-        } & {
-          /**
-           * クエリで指定されたリファレンスフィールド
-           */
-          [K in keyof T &
-            keyof GetQueryType<Ref, Q> as K extends `${infer OriginalK}Ref`
-            ? OriginalK
-            : never]: T[K] extends infer SubQueryRef
-            ? GetQueryType<Ref, Q>[K] extends infer SubQuery
-              ? SubQueryRef extends DocumentReference<infer U>
-                ? U extends DocumentData
-                  ? SubQuery extends
-                      | GraphQuery<U>
-                      | GraphQueryGenerator<DocumentReference<U>>
-                    ? GraphSnapshotQueryResult<
-                        DocumentReference<U>,
-                        SubQuery,
-                        false
-                      >
-                    : never
-                  : never
-                : SubQueryRef extends
-                    | CollectionReference<infer U>
-                    | Query<infer U>
-                ? U extends DocumentData
-                  ? SubQuery extends
-                      | GraphQuery<U>
-                      | GraphQueryGenerator<Query<U>>
-                    ? GraphSnapshotQueryResult<Query<U>, SubQuery, false>
-                    : never
-                  : never
-                : never
+  T extends DocumentData,
+  Ref extends AnyReference<T>,
+  Q extends GraphQuery<T> | GraphQueryGenerator<Ref>
+> = SelectiveOptional<
+  {
+    /**
+     * ドキュメントのもともとのフィールド
+     */
+    [K in Exclude<keyof T, keyof GetQueryType<T, Ref, Q>>]: T[K];
+  } & {
+    /**
+     * クエリで指定されたリファレンスフィールド
+     */
+    [K in keyof T &
+      keyof GetQueryType<T, Ref, Q> as K extends `${infer OriginalK}Ref`
+      ? OriginalK
+      : never]: T[K] extends infer SubQueryRef
+      ? GetQueryType<T, Ref, Q>[K] extends infer SubQuery
+        ? SubQueryRef extends DocumentReference<infer U>
+          ? U extends DocumentData
+            ? SubQuery extends
+                | GraphQuery<U>
+                | GraphQueryGenerator<DocumentReference<U>>
+              ? GraphSnapshotQueryResult<
+                  U,
+                  DocumentReference<U>,
+                  SubQuery,
+                  false
+                >
               : never
-            : never;
-        } & {
-          /**
-           * クエリで追加されたエクストラフィールド
-           */
-          [K in Exclude<keyof GetQueryType<Ref, Q>, keyof T>]: GetQueryType<
-            Ref,
-            Q
-          >[K] extends [
-            infer SubQueryRef,
-            infer SubQuery,
-            infer GuaranteedToExist
-          ]
-            ? GuaranteedToExist extends boolean
-              ? NonNullable<SubQueryRef> extends DocumentReference<infer U>
-                ? U extends DocumentData
-                  ? SubQuery extends
-                      | GraphQuery<U>
-                      | GraphQueryGenerator<DocumentReference<U>>
-                    ? GraphSnapshotQueryResult<
-                        DocumentReference<U>,
-                        SubQuery,
-                        GuaranteedToExist
-                      >
-                    : never
-                  : never
-                : NonNullable<SubQueryRef> extends
-                    | CollectionReference<infer U>
-                    | Query<infer U>
-                ? U extends DocumentData
-                  ? SubQuery extends
-                      | GraphQuery<U>
-                      | GraphQueryGenerator<Query<U>>
-                    ? GraphSnapshotQueryResult<
-                        Query<U>,
-                        SubQuery,
-                        GuaranteedToExist
-                      >
-                    : never
-                  : never
-                : never
+            : never
+          : SubQueryRef extends CollectionReference<infer U> | Query<infer U>
+          ? U extends DocumentData
+            ? SubQuery extends GraphQuery<U> | GraphQueryGenerator<Query<U>>
+              ? GraphSnapshotQueryResult<U, Query<U>, SubQuery, false>
               : never
-            : never;
-        },
-        keyof PickOptional<T> | keyof PickOptional<GetQueryType<Ref, Q>>
-      >
-    : never
-  : never;
+            : never
+          : never
+        : never
+      : never;
+  } & {
+    /**
+     * クエリで追加されたエクストラフィールド
+     */
+    [K in Exclude<keyof GetQueryType<T, Ref, Q>, keyof T>]: GetQueryType<
+      T,
+      Ref,
+      Q
+    >[K] extends [infer SubQueryRef, infer SubQuery, infer GuaranteedToExist]
+      ? GuaranteedToExist extends boolean
+        ? NonNullable<SubQueryRef> extends DocumentReference<infer U>
+          ? U extends DocumentData
+            ? SubQuery extends
+                | GraphQuery<U>
+                | GraphQueryGenerator<DocumentReference<U>>
+              ? GraphSnapshotQueryResult<
+                  U,
+                  DocumentReference<U>,
+                  SubQuery,
+                  GuaranteedToExist
+                >
+              : never
+            : never
+          : NonNullable<SubQueryRef> extends
+              | CollectionReference<infer U>
+              | Query<infer U>
+          ? U extends DocumentData
+            ? SubQuery extends GraphQuery<U> | GraphQueryGenerator<Query<U>>
+              ? GraphSnapshotQueryResult<
+                  U,
+                  Query<U>,
+                  SubQuery,
+                  GuaranteedToExist
+                >
+              : never
+            : never
+          : never
+        : never
+      : never;
+  },
+  keyof PickOptional<T> | keyof PickOptional<GetQueryType<T, Ref, Q>>
+>;
 
 export type GraphSnapshotQueryResult<
-  Ref extends AnyReference<DocumentData>,
-  Q extends GraphQuery<RefToDoc<Ref>> | GraphQueryGenerator<Ref>,
+  T extends DocumentData,
+  Ref extends AnyReference<T>,
+  Q extends GraphQuery<T> | GraphQueryGenerator<Ref>,
   GuaranteedToExist extends boolean
-> = Ref extends
-  | DocumentReference<infer T>
-  | CollectionReference<infer T>
-  | Query<infer T>
-  ? T extends DocumentData
-    ? Ref extends DocumentReference<DocumentData>
-      ? {} extends Omit<GraphQueryResult<Ref, Q>, keyof T>
-        ? true extends GuaranteedToExist
-          ? GraphQueryDocumentSnapshot<T>
-          : GraphDocumentSnapshot<T>
-        : (true extends GuaranteedToExist
-            ? GraphQueryDocumentSnapshot<T>
-            : GraphDocumentSnapshot<T>) & {
-            data: Expand<Omit<GraphQueryResult<Ref, Q>, keyof T>>;
-          }
-      : Ref extends Query<DocumentData>
-      ? {} extends Omit<GraphQueryResult<Ref, Q>, keyof T>
-        ? WithCollectionMetadata<T>
-        : (GraphQueryDocumentSnapshot<T> & {
-            data: Expand<Omit<GraphQueryResult<Ref, Q>, keyof T>>;
-          })[] &
-            CollectionMetadata<T>
-      : never
-    : never
+> = Ref extends DocumentReference<T>
+  ? {} extends Omit<GraphQueryResult<T, Ref, Q>, keyof T>
+    ? true extends GuaranteedToExist
+      ? GraphQueryDocumentSnapshot<T>
+      : GraphDocumentSnapshot<T>
+    : (true extends GuaranteedToExist
+        ? GraphQueryDocumentSnapshot<T>
+        : GraphDocumentSnapshot<T>) & {
+        data: Expand<Omit<GraphQueryResult<T, Ref, Q>, keyof T>>;
+      }
+  : Ref extends Query<T>
+  ? {} extends Omit<GraphQueryResult<T, Ref, Q>, keyof T>
+    ? WithCollectionMetadata<T>
+    : (GraphQueryDocumentSnapshot<T> & {
+        data: Expand<Omit<GraphQueryResult<T, Ref, Q>, keyof T>>;
+      })[] &
+        CollectionMetadata<T>
   : never;

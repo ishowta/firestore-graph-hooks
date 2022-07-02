@@ -9,6 +9,7 @@ import {
   AnyReference,
   DocumentData,
   GraphQuery,
+  GraphQueryDocumentSnapshot,
   GraphQueryGenerator,
   GraphSnapshotQueryResult,
 } from './types';
@@ -17,7 +18,10 @@ import {
   makeGraphQueryDocumentSnapshot,
 } from './converter';
 import { getObjectLogger, insert } from './utils';
-import { GraphQueryListener } from './GraphQueryListener';
+import {
+  GraphQueryListener,
+  GraphQueryListenerOutput,
+} from './GraphQueryListener';
 import { Logger } from 'loglevel';
 
 export interface GraphListener<
@@ -48,7 +52,7 @@ export const makeGraphListener = <
   ref: Ref,
   queryGenerator: Q,
   handleUpdate: (
-    result: GraphSnapshotQueryResult<Ref, Q, false> | undefined
+    result: GraphSnapshotQueryResult<T, Ref, Q, false> | undefined
   ) => void,
   handleError: (error: FirestoreError) => void
 ): GraphListener<T, DocumentReference<T> | Query<T>, Q> => {
@@ -56,16 +60,24 @@ export const makeGraphListener = <
     return new GraphCollectionListener<T, Query<T>, Q>(
       ref as Query<T>,
       queryGenerator,
-      handleUpdate,
+      handleUpdate as (
+        result: GraphSnapshotQueryResult<T, Query<T>, Q, false> | undefined
+      ) => void,
       handleError
     );
   } else if (ref instanceof DocumentReference) {
     return new GraphDocumentListener<T, DocumentReference<T>, Q>(
       ref as DocumentReference<T>,
       queryGenerator,
-      handleUpdate,
+      handleUpdate as (
+        result:
+          | GraphSnapshotQueryResult<T, DocumentReference<T>, Q, false>
+          | undefined
+      ) => void,
       handleError
     );
+  } else {
+    throw new Error('Unreachable');
   }
 };
 
@@ -87,7 +99,7 @@ export class GraphDocumentListener<
     ref: Ref,
     query: Q,
     handleUpdate: (
-      result: GraphSnapshotQueryResult<Ref, Q, false> | undefined
+      result: GraphSnapshotQueryResult<T, Ref, Q, false> | undefined
     ) => void,
     handleError: (error: FirestoreError) => void
   ) {
@@ -99,7 +111,7 @@ export class GraphDocumentListener<
     this.queryListener = undefined;
 
     const onUpdate = (
-      result: GraphSnapshotQueryResult<Ref, Q, false> | undefined
+      result: GraphSnapshotQueryResult<T, Ref, Q, false> | undefined
     ) => {
       this.logger.debug('onUpdate', result);
       this.loading = false;
@@ -114,7 +126,6 @@ export class GraphDocumentListener<
       if (this.queryListener) {
         if (snapshot.exist) {
           this.queryListener.updateSnapshot(snapshot, false);
-          onUpdate(this.queryListener.result);
         } else {
           onUpdate(undefined);
         }
@@ -123,7 +134,7 @@ export class GraphDocumentListener<
           this.queryListener = new GraphQueryListener(
             snapshot,
             query,
-            onUpdate,
+            onUpdate as (result: GraphQueryListenerOutput<T, Ref, Q>) => void, // FIXME: wrong type
             () => {}
           );
         } else {
@@ -166,14 +177,14 @@ export class GraphCollectionListener<
   listenerUnsubscriber: Unsubscribe;
   query: Q;
   queryListeners: Record<string, GraphQueryListener<T, Ref, Q>>;
-  result: GraphSnapshotQueryResult<Ref, Q, false>[];
+  result: GraphQueryDocumentSnapshot<T>[]; // GraphQueryListenerOutput<T, Ref, Q>[]; // GraphSnapshotQueryResult<T, Ref, Q, false>
   loading: boolean;
   logger: Logger;
 
   constructor(
     ref: Ref,
     query: Q,
-    handleUpdate: (result: GraphSnapshotQueryResult<Ref, Q, false>[]) => void,
+    handleUpdate: (result: GraphSnapshotQueryResult<T, Ref, Q, false>) => void,
     handleError: (error: FirestoreError) => void
   ) {
     this.logger = getObjectLogger(this, (ref as any).path);
@@ -186,7 +197,6 @@ export class GraphCollectionListener<
     const onUpdate = () => {
       this.logger.debug('onUpdate');
 
-      // FIXME: initializedではなくloadingを見るべきでは?
       this.logger.debug(
         `${
           Object.values(this.queryListeners).filter(
@@ -195,12 +205,7 @@ export class GraphCollectionListener<
         }/${this.result.length} initialized`
       );
 
-      if (
-        Object.keys(this.queryListeners).length === this.result.length &&
-        Object.values(this.queryListeners).every(
-          (queryListener) => queryListener.isQueryInitialized
-        )
-      ) {
+      if (this.isCompletedQueryResult(this.result)) {
         this.logger.debug('updated');
         this.loading = false;
         handleUpdate(this.result);
@@ -209,7 +214,7 @@ export class GraphCollectionListener<
 
     const onUpdateWithResult = (
       path: string,
-      result: GraphSnapshotQueryResult<Ref, Q, false>
+      result: GraphQueryListenerOutput<T, Ref, Q>
     ) => {
       this.logger.debug('onUpdateWithResult', path, result);
       const docIndex = this.result.findIndex((res) => res.ref.path === path);
@@ -272,15 +277,23 @@ export class GraphCollectionListener<
               snapshot,
               false
             );
-            onUpdateWithResult(
-              docChange.doc.ref.path,
-              this.queryListeners[docChange.doc.ref.path].result
-            );
             break;
         }
       }
       onUpdate();
     });
+  }
+
+  // FIXME: initializedではなくloadingを見ないといけない
+  private isCompletedQueryResult(
+    result: GraphQueryDocumentSnapshot<T>[]
+  ): result is GraphSnapshotQueryResult<T, Ref, Q, false> {
+    return (
+      Object.keys(this.queryListeners).length === result.length &&
+      Object.values(this.queryListeners).every(
+        (queryListener) => queryListener.isQueryInitialized
+      )
+    );
   }
 
   updateQuery(newQuery: Q, dryRun: boolean): boolean {

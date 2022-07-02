@@ -70,7 +70,7 @@ export const makeQuery = <
     typeof queryGenerator === 'function'
       ? queryGenerator(snapshot)
       : queryGenerator
-  ) as GetQueryType<Ref, Q>;
+  ) as GetQueryType<T, Ref, Q>;
 };
 
 export const isQueryKey = (

@@ -27,7 +27,7 @@ import {
   User,
 } from './schema';
 
-type Test = Expand<GraphQueryResult<CollectionReference<Project>, {}>>;
+type Test = Expand<GraphQueryResult<Project, CollectionReference<Project>, {}>>;
 
 const types = () => {
   let firestore: Firestore = {} as any;

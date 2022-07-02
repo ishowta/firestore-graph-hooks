@@ -2,6 +2,7 @@ import {
   CollectionReference,
   DocumentReference,
   FirestoreError,
+  Query,
 } from 'firebase/firestore';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Expand } from './utils';
@@ -25,12 +26,12 @@ type Root = {};
 export function useRootQuery<Q extends GraphQuery<Root>>(
   query: Q
 ): [
-  Expand<GraphQueryResult<DocumentReference<Root>, Q>> | undefined,
+  Expand<GraphQueryResult<Root, DocumentReference<Root>, Q>> | undefined,
   boolean,
   Error | undefined
 ] {
   const [value, setValue] =
-    useState<Expand<GraphQueryResult<DocumentReference<Root>, Q>>>();
+    useState<Expand<GraphQueryResult<Root, DocumentReference<Root>, Q>>>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestoreError>();
   const rootListener =
@@ -88,17 +89,26 @@ export function useRootQuery<Q extends GraphQuery<Root>>(
   return [value, immediateLoading, error];
 }
 
+export type UseQueryResult<
+  Ref extends AnyReference<DocumentData>,
+  Q extends GraphQuery<RefToDoc<Ref>> | GraphQueryGenerator<Ref>,
+  GuaranteedToExist extends boolean
+> = Ref extends
+  | DocumentReference<infer T>
+  | CollectionReference<infer T>
+  | Query<infer T>
+  ? T extends DocumentData
+    ? GraphSnapshotQueryResult<T, Ref, Q, GuaranteedToExist>
+    : never
+  : never;
+
 export function useQuery<
   Ref extends AnyReference<DocumentData>,
   Q extends GraphQuery<RefToDoc<Ref>> | GraphQueryGenerator<Ref>
 >(
   ref: Ref | undefined,
   query: Q
-): [
-  GraphSnapshotQueryResult<Ref, Q, false> | undefined,
-  boolean,
-  Error | undefined
-] {
+): [UseQueryResult<Ref, Q, false> | undefined, boolean, Error | undefined] {
   const [value, loading, error] = useRootQuery({
     base: field<Ref, Q, false>(ref, query),
   });

@@ -21,12 +21,12 @@ import { GraphListener, makeGraphListener } from './GraphListener';
 import { Logger } from 'loglevel';
 import { Expand, getObjectLogger } from './utils';
 
-type Result<
+export type GraphQueryListenerOutput<
   T extends DocumentData,
   Ref extends AnyReference<T>,
   Q extends GraphQuery<T> | GraphQueryGenerator<Ref>
 > = GraphQueryDocumentSnapshot<T> & {
-  data: Expand<GraphQueryResult<Ref, Q>>;
+  data: Expand<GraphQueryResult<T, Ref, Q>>;
 };
 export class GraphQueryListener<
   T extends DocumentData,
@@ -45,13 +45,13 @@ export class GraphQueryListener<
     >
   >;
   isQueryInitialized: boolean;
-  handleUpdate: (result: Result<T, Ref, Q>) => void;
+  handleUpdate: (result: GraphQueryListenerOutput<T, Ref, Q>) => void;
   logger: Logger;
 
   constructor(
     snapshot: GraphQueryDocumentSnapshot<T>,
     queryGenerator: Q,
-    handleUpdate: (result: Result<T, Ref, Q>) => void,
+    handleUpdate: (result: GraphQueryListenerOutput<T, Ref, Q>) => void,
     handleError: (error: FirestoreError) => void
   ) {
     this.logger = getObjectLogger(this, snapshot.ref.path);
@@ -90,14 +90,14 @@ export class GraphQueryListener<
 
   private isEmptyQueryResult(
     result: GraphQueryDocumentSnapshot<T>,
-    query: GetQueryType<Ref, Q>
-  ): result is Result<T, Ref, Q> {
+    query: GetQueryType<T, Ref, Q>
+  ): result is GraphQueryListenerOutput<T, Ref, Q> {
     return Object.keys(query).length === 0;
   }
 
   private isCompletedQueryResult(
     result: GraphQueryDocumentSnapshot<T>
-  ): result is Result<T, Ref, Q> {
+  ): result is GraphQueryListenerOutput<T, Ref, Q> {
     return Object.values(this.subQueryListeners).every(
       (subQueryListener) => !subQueryListener.loading
     );
