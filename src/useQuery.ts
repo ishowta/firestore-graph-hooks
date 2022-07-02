@@ -3,6 +3,7 @@ import {
   DocumentReference,
   FirestoreError,
   Query,
+  refEqual,
 } from 'firebase/firestore';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Expand } from './utils';
@@ -115,11 +116,34 @@ export function useQuery<
   ref: Ref | undefined,
   query: Q
 ): [UseQueryResult<Ref, Q, false> | undefined, boolean, Error | undefined] {
-  const [value, loading, error] = useRootQuery({
-    base: field(ref, query),
-  });
+  // Memorize ref
+  // eslint-disable-next-line no-var
+  const [_ref, _setRef] = useState(ref);
+  useEffect(() => {
+    if (ref == null || _ref == null || !refEqual(ref as any, _ref as any)) {
+      _setRef(ref);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ref]);
 
-  return [value?.base, loading, error];
+  // Memorize rootQuery
+  const rootQuery = useMemo(() => {
+    return {
+      base: field(_ref, query),
+    };
+  }, [query, _ref]);
+
+  const [value, loading, error] = useRootQuery(rootQuery);
+
+  const immediateLoading = useMemo(() => {
+    if (!loading) {
+      return ref == null || _ref == null || refEqual(ref as any, _ref as any);
+    }
+    return loading;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ref, loading]);
+
+  return [value?.base, immediateLoading, error];
 }
 
 export function field<
