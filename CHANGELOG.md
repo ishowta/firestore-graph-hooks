@@ -1,3 +1,24 @@
+# [1.0.0-alpha.5](https://github.com/ishowta/firestore-join-hooks/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2022-07-02)
+
+
+### Bug Fixes
+
+* fix loading state ([72bcb62](https://github.com/ishowta/firestore-join-hooks/commit/72bcb62a927df4999848aaf81864b844b280165c))
+* fix type refactoring regression ([16584ec](https://github.com/ishowta/firestore-join-hooks/commit/16584ec18030e19cdc17643dde3ab51d2d773b8c))
+* fix typing for nullable query ref arg ([338a35a](https://github.com/ishowta/firestore-join-hooks/commit/338a35af457e07ef91d71f8273746df759a5b6ec))
+* implove typing and fix fetching not exist documents ([9e14b42](https://github.com/ishowta/firestore-join-hooks/commit/9e14b42c5796a264c72cd961f387fdd2cdf9f4c7))
+* remove unsubscribed queries to fix update call prevented ([fae023e](https://github.com/ishowta/firestore-join-hooks/commit/fae023e8dd0e332f788c823f46ecdd830b95edeb))
+
+
+### Features
+
+* export types ([697a884](https://github.com/ishowta/firestore-join-hooks/commit/697a884f2f39733c0dc5482c2e04317353f402f2))
+
+
+### Performance Improvements
+
+* memorize query ([1442936](https://github.com/ishowta/firestore-join-hooks/commit/14429366346f3e064032009bed87fd076e90fd77))
+
 # [1.0.0-alpha.4](https://github.com/ishowta/firestore-join-hooks/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2022-02-15)
 
 
