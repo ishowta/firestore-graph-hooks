@@ -225,6 +225,7 @@ export class GraphQueryListener<
       this.logger.debug('ref removed');
       if (dryRun) return true;
       this.subQueryListeners[subQueryKey].unsubscribe();
+      delete this.subQueryListeners[subQueryKey];
       if (this.result) {
         delete this.result.data[subQueryKey];
       }
@@ -245,6 +246,7 @@ export class GraphQueryListener<
       this.logger.debug('ref type changed');
       if (dryRun) return true;
       this.subQueryListeners[subQueryKey].unsubscribe();
+      delete this.subQueryListeners[subQueryKey];
       if (this.result) {
         delete this.result.data[subQueryKey];
       }
@@ -262,6 +264,7 @@ export class GraphQueryListener<
       this.logger.debug('ref changed');
       if (dryRun) return true;
       this.subQueryListeners[subQueryKey].unsubscribe();
+      delete this.subQueryListeners[subQueryKey];
       if (this.result) {
         delete this.result.data[subQueryKey];
       }
@@ -520,5 +523,6 @@ export class GraphQueryListener<
     Object.values(this.subQueryListeners).forEach((queryListener) =>
       queryListener.unsubscribe()
     );
+    this.subQueryListeners = {};
   }
 }

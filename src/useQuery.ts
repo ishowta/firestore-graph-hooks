@@ -65,7 +65,10 @@ export function useRootQuery<Q extends GraphQuery<Root>>(
       }
     );
     return () => {
-      rootListener.current?.unsubscribe();
+      if (rootListener.current) {
+        rootListener.current.unsubscribe();
+        rootListener.current = undefined;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

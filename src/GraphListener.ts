@@ -130,6 +130,8 @@ export class GraphDocumentListener<
           this.queryListener.updateSnapshot(snapshot, false);
           onUpdate(this.queryListener.result as any);
         } else {
+          this.queryListener.unsubscribe();
+          delete this.queryListener;
           onUpdate(snapshot);
         }
       } else {
@@ -165,6 +167,7 @@ export class GraphDocumentListener<
     this.logger.debug('unsubscribe');
     if (this.queryListener) {
       this.queryListener.unsubscribe();
+      delete this.queryListener;
     }
     this.listenerUnsubscriber();
   }
@@ -274,6 +277,7 @@ export class GraphCollectionListener<
           }
           case 'removed':
             this.queryListeners[docChange.doc.ref.path].unsubscribe();
+            delete this.queryListeners[docChange.doc.ref.path];
             break;
           case 'modified':
             this.queryListeners[docChange.doc.ref.path].updateSnapshot(
@@ -325,9 +329,10 @@ export class GraphCollectionListener<
   unsubscribe(): void {
     this.logger.debug('unsubscribe');
     if (this.queryListeners) {
-      Object.values(this.queryListeners).forEach((queryListener) =>
-        queryListener.unsubscribe()
-      );
+      Object.values(this.queryListeners).forEach((queryListener) => {
+        queryListener.unsubscribe();
+      });
+      this.queryListeners = {};
     }
     this.listenerUnsubscriber();
   }
