@@ -33,6 +33,7 @@ export const App = () => {
   - result do not update on loading
   - should loading variable turn to true when onSnapshot
   - do not use path as key
+  - race condition
 - add tests
 - nested document data
 - error handling
